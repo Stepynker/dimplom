@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Профиль - LitLinks</title>
+    <link rel="stylesheet" href="Cssik.css">
+</head>
+<body>
+    <!-- Шапка сайта -->
+    <header>
+        <div class="logo">
+            <a href="index.html" class="site-title">
+                <img src="/images/logo.png" alt="Логотип LitLinks" class="logo-image">
+                <span class="site-name">LitLinks</span>
+            </a>
+        </div>
+        <div class="menu-icon" id="menu-icon">☰</div>
+        <nav class="sidebar" id="sidebar">
+            <button class="close-menu" id="close-menu">×</button>
+            <ul>
+                <li><a href="profile.html" class="profile-button">👤 Профиль</a></li>
+                <li><a href="#" id="open-settings">⚙️ Настройки</a></li>
+                <li id="bookmarks-link"><a href="bookmarks.html">📚 Закладки</a></li>
+                <li><button class="logout-icon">⎘ Выйти</button></li>
+            </ul>
+        </nav>
+    </header>
+    <!-- Основной контент -->
+    <section class="profile-info">
+        <h2>Профиль пользователя</h2>
+        <div class="user-details">
+            <!-- Аватарка -->
+            <div class="avatar-section">
+                <img id="profile-avatar" src="/images/default-avatar.jpg" alt="Аватарка пользователя" class="avatar-image">
+                <input type="file" id="avatar-upload" accept="image/*" style="display: none;">
+                <button id="change-avatar">Изменить аватарку</button>
+            </div>
+            <!-- Логин и Email -->
+            <p><strong>Логин:</strong> <span id="profile-login">Имя пользователя</span></p>
+            <p><strong>Email:</strong> <span id="profile-email">user@example.com</span></p>
+            <!-- О себе -->
+            <div class="about-me">
+                <h3>О себе</h3>
+                <p id="about-me-text">Пока ничего не указано.</p>
+                <button id="edit-about-me">Редактировать</button>
+            </div>
+        </div>
+    </section>
+
+<!-- Чат -->
+<div class="chat-widget">
+    <button class="chat-toggle">💬</button>
+    <div class="chat-container">
+        <div class="chat-messages" id="chat-messages"></div>
+        <div class="chat-input">
+            <textarea id="message-input" placeholder="Напишите сообщение..."></textarea>
+            <button id="send-message">Отправить</button>
+        </div>
+    </div>
+</div>
+
+
+
+    <script src="Javik.js"></script>
+</body>
+</html>

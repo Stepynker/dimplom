@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Закладки - LitLinks</title>
+    <link rel="stylesheet" href="Cssik.css">
+</head>
+<body>
+    <!-- Шапка сайта -->
+    <header>
+        <div class="logo">
+            <a href="index.html" class="site-title">
+                <img src="/images/logo.png" alt="Логотип LitLinks" class="logo-image">
+                <span class="site-name">LitLinks</span>
+            </a>
+        </div>
+        <div class="menu-icon" id="menu-icon">☰</div>
+        <nav class="sidebar" id="sidebar">
+            <button class="close-menu" id="close-menu">×</button>
+            <ul>
+                <li id="auth-link"><a href="#" id="open-login">Войти</a> / <a href="#" id="open-register">Регистрация</a></li>
+                <li id="profile-link" class="hidden">
+                    <a href="profile.html" class="profile-button">👤 Профиль</a>
+                    <a href="#" id="open-settings">⚙️ Настройки</a>
+                    <li id="bookmarks-link"><a href="bookmarks.html">📚 Закладки</a>
+                    <button class="logout-icon">⎘ Выход</button>
+                </li>
+            </ul>
+        </nav>
+    </header>
+
+    <!-- Основной контент -->
+    <main>
+        <section class="bookmarks">
+            <h2>Мои закладки</h2>
+            <div class="filter-genre">
+                <label for="genre-filter">Фильтр по жанру:</label>
+                <select id="genre-filter">
+                    <option value="all">Все жанры</option>
+                    <option value="Фэнтези">Фэнтези</option>
+                    <option value="Научная фантастика">Научная фантастика</option>
+                    <option value="Детектив">Детектив</option>
+                    <option value="Романтика">Романтика</option>
+                </select>
+            </div>
+            <div class="bookmarks-grid" id="bookmarks-grid">
+                <!-- Закладки будут добавляться сюда через JavaScript -->
+            </div>
+        </section>
+    </main>
+
+    <!-- Чат -->
+    <div class="chat-widget">
+        <button class="chat-toggle">💬</button>
+        <div class="chat-container">
+            <div class="chat-messages" id="chat-messages"></div>
+            <div class="chat-input">
+                <textarea id="message-input" placeholder="Напишите сообщение..."></textarea>
+                <button id="send-message">Отправить</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="Javik.js"></script>
+</body>
+</html>

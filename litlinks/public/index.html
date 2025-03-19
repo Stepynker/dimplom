@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LitLinks</title>
+    <link rel="stylesheet" href="Cssik.css">
+</head>
+<body>
+    <!-- Шапка сайта -->
+    <header>
+        <div class="logo">
+            <a href="index.html" class="site-title">
+                <img src="/images/logo.png" alt="Логотип LitLinks" class="logo-image">
+                <span class="site-name">LitLinks</span>
+            </a>
+        </div>
+        
+        <div class="search-bar">
+            <input type="text" id="search-input" placeholder="Поиск...">
+            <button id="search-button">🔍</button>
+        </div>
+        <div class="menu-icon" id="menu-icon">☰</div>
+        <nav class="sidebar" id="sidebar">
+            <button class="close-menu" id="close-menu">×</button>
+            <ul>
+                <li><a href="profile.html" class="profile-button">👤 Профиль</a></li>
+                <li><a href="#" id="open-settings">⚙️ Настройки</a></li>
+                <li id="bookmarks-link"><a href="bookmarks.html">📚 Закладки</a></li>
+                <li><button class="logout-icon">⎘ Выйти</button></li>
+                
+            </ul>
+        </nav>
+    </header>
+    <!-- Модальное окно регистрации -->
+    <div class="modal" id="register-modal">
+        <div class="modal-content">
+            <button class="close-modal" id="close-register">×</button>
+            <h2>Регистрация</h2>
+            <form id="register-form">
+                <input type="text" id="register-login" placeholder="Логин" required>
+                <input type="email" id="register-email" placeholder="Email" required>
+                <input type="password" id="register-password" placeholder="Пароль" required>
+                <input type="password" id="register-confirm-password" placeholder="Подтверждение пароля" required>
+                <button type="submit">Зарегистрироваться</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Модальное окно входа -->
+    <div class="modal" id="login-modal">
+        <div class="modal-content">
+            <button class="close-modal" id="close-login">×</button>
+            <h2>Вход</h2>
+            <form id="login-form">
+                <input type="text" id="login-username" placeholder="Логин" required>
+                <input type="password" id="login-password" placeholder="Пароль" required>
+                <button type="submit">Войти</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Основной контент -->
+    <main>
+        <section class="book-list">
+            <h2>Рекомендации</h2>
+            <div class="books-grid" id="books"></div> <!-- Убедитесь, что этот элемент существует -->
+        </section>
+    </main>
+
+
+<!-- Чат -->
+<div class="chat-widget">
+    <button class="chat-toggle">💬</button>
+    <div class="chat-container">
+        <div class="chat-messages" id="chat-messages"></div>
+        <div class="chat-input">
+            <textarea id="message-input" placeholder="Напишите сообщение..."></textarea>
+            <button id="send-message">Отправить</button>
+        </div>
+    </div>
+</div>
+
+
+    <script src="Javik.js"></script>
+</body>
+</html>
