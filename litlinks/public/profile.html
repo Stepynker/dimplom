@@ -11,17 +11,57 @@
     <header>
         <div class="logo">
             <a href="index.html" class="site-title">
-                <img src="/images/logo.png" alt="Логотип LitLinks" class="logo-image">
+                <svg class="logo-icon" viewBox="0 0 24 24">
+                    <path d="M12 2L2 7v10l10 5 10-5V7L12 2z"/>
+                </svg>
                 <span class="site-name">LitLinks</span>
             </a>
         </div>
-        <div class="menu-icon" id="menu-icon">☰</div>
+        <div class="modal" id="search-modal">
+            <div class="modal-content search-modal-content">
+                <button class="close-modal" id="close-search">×</button>
+                <div class="search-bar-modal">
+                    <input type="text" id="search-input-modal" placeholder="Поиск книг, авторов, пользователей...">
+                        
+                    </button>
+                </div>
+        
+                <div class="search-tabs">
+                    <button class="search-tab active" data-tab="books">Книги</button>
+                    <button class="search-tab" data-tab="users">Пользователи</button>
+                </div>
+        
+                <div class="search-results">
+                    <div class="search-tab-content active" id="books-results">
+                        <!-- Здесь будут результаты поиска по книгам -->
+                        <div class="empty-results">Введите запрос для поиска книг</div>
+                    </div>
+        
+                    <div class="search-tab-content" id="users-results">
+                        <!-- Здесь будут результаты поиска по пользователям -->
+                        <div class="empty-results">Введите запрос для поиска пользователей</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="search-bar">
+            <button id="search-button" class="search-button">
+                <span class="search-icon">🔍</span>
+                <span class="search-text">Поиск</span>
+            </button>
+        </div>
+        <div>
+            <button id="theme-toggle" class="theme-toggle">
+            </button>
+        </div>
+
+            <div class="menu-icon" id="menu-icon">☰</div>
         <nav class="sidebar" id="sidebar">
             <button class="close-menu" id="close-menu">×</button>
             <ul>
                 <li><a href="profile.html" class="profile-button">👤 Профиль</a></li>
-                <li><a href="#" id="open-settings">⚙️ Настройки</a></li>
                 <li id="bookmarks-link"><a href="bookmarks.html">📚 Закладки</a></li>
+                <li id="notifications-link"><a href="notifications.html" class="notification-menu-item"> 🔔 Уведомления <span class="notification-counter"></span></a> </li>
                 <li><button class="logout-icon">⎘ Выйти</button></li>
             </ul>
         </nav>
@@ -36,6 +76,24 @@
                 <input type="file" id="avatar-upload" accept="image/*" style="display: none;">
                 <button id="change-avatar">Изменить аватарку</button>
             </div>
+            <div id="profile-container">
+                <div class="profile-header">
+                    <h1 id="profile-username"></h1>
+                    <button id="message-button" style="display: none;">Написать сообщение</button>
+                </div>
+                <div class="profile-about">
+                    <h2>О себе</h2>
+                    <p id="profile-about"></p>
+                </div>
+                <div class="user-books">
+<div class="user-books">
+    <h3>Мои книги</h3>
+    <div id="user-books-grid"></div>
+</div>
+         <div id="user-books-grid"></div>
+    <!-- Книги будут здесь -->
+</div>
+                <button id="add-book-button">➕ Добавить книгу</button>
             <!-- Логин и Email -->
             <p><strong>Логин:</strong> <span id="profile-login">Имя пользователя</span></p>
             <p><strong>Email:</strong> <span id="profile-email">user@example.com</span></p>
@@ -59,9 +117,10 @@
         </div>
     </div>
 </div>
-
-
-
-    <script src="Javik.js"></script>
+<script src="Javik.js"></script>
+<script src="profile.js"></script>
+<script src="/nightLight.js"></script>
+<script src="avatar.js"></script>
+<script src="Poisk.js"></script>
 </body>
 </html>

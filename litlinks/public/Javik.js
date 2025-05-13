@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const messageInput = document.getElementById('message-input');
     const chatMessages = document.getElementById('chat-messages');
     
+window.currentUser = JSON.parse(localStorage.getItem('user'));
     window.addEventListener('storage', (event) => {
         console.log('Событие storage сработало:', event);
     });
@@ -36,47 +37,41 @@ document.addEventListener('DOMContentLoaded', function () {
         checkAuth();
     });
    // Делаем функцию checkAuth глобальной
-function checkAuth() {
+   function checkAuth() {
     const user = JSON.parse(localStorage.getItem('user'));
-    const authLink = document.getElementById('authLink');
-    const profileLink = document.getElementById('profileLink');
-    const logoutIcon = document.querySelector('.logout-icon');
-
+    const authLink = document.getElementById('authLink'); // Кнопки "Войти" и "Регистрация"
+    const profileLink = document.getElementById('profile-link'); // Кнопка "Профиль"
+    const settingsLink = document.getElementById('settings-link'); // Кнопка "Настройки"
+    const bookmarksLink = document.getElementById('bookmarks-link'); // Кнопка "Закладки"
+    const logoutLink = document.getElementById('logout-icon'); // Кнопка "Выйти"
+    const notificationsLink = document.getElementById('notifications-link');
     if (user) {
         // Пользователь авторизован
-        if (authLink) authLink.classList.add('hidden'); // Скрываем кнопки "Войти" и "Регистрация"
-        if (profileLink) profileLink.classList.remove('hidden'); // Показываем кнопки "Профиль", "Настройки" и "Закладки"
+        if (authLink) authLink.classList.add('hidden'); // Скрываем "Войти" и "Регистрация"
+        if (profileLink) profileLink.classList.remove('hidden'); // Показываем "Профиль"
+        if (settingsLink) settingsLink.classList.remove('hidden'); // Показываем "Настройки"
+        if (bookmarksLink) bookmarksLink.classList.remove('hidden'); // Показываем "Закладки"
+        if (logoutLink) logoutLink.classList.remove('hidden'); // Показываем "Выйти"
+         if (notificationsLink) notificationsLink.classList.remove('hidden');
         if (profileLogin) profileLogin.textContent = user.login;
         if (profileEmail) profileEmail.textContent = user.email;
     } else {
         // Пользователь не авторизован
-        if (authLink) authLink.classList.remove('hidden'); // Показываем кнопки "Войти" и "Регистрация"
-        if (profileLink) profileLink.classList.add('hidden'); // Скрываем кнопки "Профиль", "Настройки" и "Закладки"
+        if (authLink) authLink.classList.remove('hidden'); // Показываем "Войти" и "Регистрация"
+        if (profileLink) profileLink.classList.add('hidden'); // Скрываем "Профиль"
+        if (settingsLink) settingsLink.classList.add('hidden'); // Скрываем "Настройки"
+        if (bookmarksLink) bookmarksLink.classList.add('hidden'); // Скрываем "Закладки"
+        if (logoutLink) logoutLink.classList.add('hidden'); // Скрываем "Выйти"
+         if (notificationsLink) notificationsLink.classList.add('hidden');
         if (window.location.pathname.endsWith('profile.html') || window.location.pathname.endsWith('bookmarks.html')) {
             window.location.href = 'index.html';
         }
-        if (openLogin && openRegister) {
-            openLogin.addEventListener('click', function (e) {
-                e.preventDefault();
-                if (window.location.pathname.endsWith('bookmarks.html')) {
-                    window.location.href = 'index.html';
-                } else {
-                    loginModal.classList.add('active');
-                }
-                
-            });
-
-            openRegister.addEventListener('click', function (e) {
-                e.preventDefault();
-                if (window.location.pathname.endsWith('bookmarks.html')) {
-                    window.location.href = 'index.html';
-                } else {
-                    registerModal.classList.add('active');
-                }
-            });
-        }
     }
 }
+
+window.onload = function() {
+    checkAuth();
+};
 const user = JSON.parse(localStorage.getItem('user'));
 console.log('Пользователь:', user);
 
@@ -89,42 +84,205 @@ document.addEventListener('DOMContentLoaded', function () {
     checkAuth();
     console.log('checkAuth вызвана');
 
+
+    let currentUserId = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Проверяем авторизацию и устанавливаем currentUserId
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (user) {
+        currentUserId = user.id;
+    }
+
+    // Получаем ID пользователя из URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const userId = urlParams.get('user_id');
+    
+    if (!userId) {
+        // Если ID не указан, показываем профиль текущего пользователя
+        loadCurrentUserProfile();
+    } else {
+        // Загружаем данные профиля указанного пользователя
+        loadUserProfile(userId);
+    }
+});
+
+
+async function loadUserProfile(userId) {
+    try {
+        const response = await fetch(`http://localhost:5000/api/user/${userId}`);
+        if (!response.ok) {
+            throw new Error('Пользователь не найден');
+        }
+        const user = await response.json();
+        
+        // Заполняем данные профиля
+        document.getElementById('profile-username').textContent = user.login;
+        document.getElementById('profile-avatar').src = user.avatar_url || '/images/default-avatar.png';
+        document.getElementById('profile-about').textContent = user.about_me || 'Пользователь пока ничего о себе не рассказал';
+        
+        // Показываем кнопку "Написать сообщение" если это не наш профиль
+        if (user.id !== currentUserId) {
+            document.getElementById('message-button').style.display = 'block';
+        }
+        
+    } catch (error) {
+        console.error('Ошибка загрузки профиля:', error);
+        document.getElementById('profile-container').innerHTML = `
+            <div class="error-message">Пользователь не найден</div>
+        `;
+    }
+}
+
+window.loadCurrentUserProfile = function() {
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user) {
+        window.location.href = 'index.html';
+        return;
+    }
+
+    console.log('Загрузка профиля для:', user.id);
+    document.getElementById('profile-username').textContent = user.login;
+    
+    // Загрузка книг
+    window.loadUserBooks(user.id);
+};
+
+window.loadUserBooks = async function(userId) {
+    const grid = document.getElementById('user-books-grid');
+    if (!grid) return;
+
+    try {
+        const response = await fetch(`http://localhost:5000/api/user-books/${userId}`);
+        const books = await response.json();
+        
+        grid.innerHTML = books.map(book => `
+            <div style="margin: 10px; padding: 10px; border: 1px solid #ccc;">
+                <img src="${book.cover_url || 'default-cover.jpg'}" 
+                     style="width: 80px; height: 120px; object-fit: cover;">
+                <div>${book.title}</div>
+            </div>
+        `).join('');
+    } catch (error) {
+        grid.innerHTML = '<p>Ошибка загрузки книг</p>';
+        console.error(error);
+    }
+};
+
+// Инициализация
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof loadCurrentUserProfile === 'function') {
+        loadCurrentUserProfile();
+    }
+});
+
+async function loadUserBooks(userId) {
+    const grid = document.getElementById('user-books-grid');
+    if (!grid) {
+        console.error('ОШИБКА: Не найден элемент #user-books-grid');
+        return;
+    }
+
+    try {
+        grid.innerHTML = '<p>Загрузка книг...</p>';
+        
+        const response = await fetch(`http://localhost:5000/api/user-books/${userId}`);
+        if (!response.ok) throw new Error(`HTTP error! ${response.status}`);
+        
+        const books = await response.json();
+        console.log('Получены книги:', books);
+
+        if (books.length === 0) {
+            grid.innerHTML = '<p class="no-books">У вас пока нет книг</p>';
+            return;
+        }
+
+        grid.innerHTML = books.map(book => `
+            <div class="book-card" 
+                 onclick="location.href='book.html?id=${book.id}'"
+                 style="cursor: pointer; margin: 10px; padding: 10px; border: 1px solid #ddd;">
+                <img src="${book.cover_url || 'default-cover.jpg'}" 
+                     alt="${book.title}" 
+                     style="width: 80px; height: 120px; object-fit: cover;">
+                <div>${book.title}</div>
+            </div>
+        `).join('');
+
+    } catch (error) {
+        console.error('Ошибка:', error);
+        grid.innerHTML = `<p class="error">Ошибка загрузки: ${error.message}</p>`;
+    }
+}
+
+// Инициализация
+document.addEventListener('DOMContentLoaded', () => {
+    loadCurrentUserProfile();
+});
+
+// Инициализация при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const userId = urlParams.get('user_id');
+
+    if (userId) {
+        loadUserProfileById(userId);
+    } else {
+        loadCurrentUserProfile();
+    }
+});
+
     // Открытие/закрытие меню
     if (menuIcon && sidebar && closeMenu) {
+        // Открытие меню
         menuIcon.addEventListener('click', function () {
             sidebar.classList.add('active');
-            document.querySelector('.chat-widget').classList.toggle('shift');
-            document.querySelector('.chat-container').classList.toggle('shift');
+            document.querySelector('.chat-widget').classList.add('shift');
+            document.querySelector('.chat-container').classList.add('shift');
         });
-        
+
+        // Закрытие меню
         closeMenu.addEventListener('click', function () {
             sidebar.classList.remove('active');
             document.querySelector('.chat-widget').classList.remove('shift');
             document.querySelector('.chat-container').classList.remove('shift');
         });
+    } else {
+        console.error('Один из элементов (menuIcon, sidebar, closeMenu) не найден в DOM.');
     }
-
-    // Открытие/закрытие модальных окон
-    if (openLogin && openRegister && closeLogin && closeRegister) {
-        openLogin.addEventListener('click', function (e) {
-            e.preventDefault();
-            loginModal.classList.add('active');
+    
+// Открытие/закрытие модальных окон
+if (openLogin && openRegister && closeLogin && closeRegister) {
+    // Функция для закрытия модального окна при клике вне его
+    const setupModalClose = (modal) => {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.classList.remove('active');
+            }
         });
+    };
 
-        openRegister.addEventListener('click', function (e) {
-            e.preventDefault();
-            registerModal.classList.add('active');
-        });
+    // Обработчики для окна входа
+    openLogin.addEventListener('click', function(e) {
+        e.preventDefault();
+        loginModal.classList.add('active');
+    });
+    
+    closeLogin.addEventListener('click', function() {
+        loginModal.classList.remove('active');
+    });
+    setupModalClose(loginModal);
 
-        closeLogin.addEventListener('click', function () {
-            loginModal.classList.remove('active');
-        });
-
-        closeRegister.addEventListener('click', function () {
-            registerModal.classList.remove('active');
-        });
-    }
-
+    // Обработчики для окна регистрации
+    openRegister.addEventListener('click', function(e) {
+        e.preventDefault();
+        registerModal.classList.add('active');
+    });
+    
+    closeRegister.addEventListener('click', function() {
+        registerModal.classList.remove('active');
+    });
+    setupModalClose(registerModal);
+}
     // Регистрация
     if (registerForm) {
         registerForm.addEventListener('submit', async function (e) {
@@ -196,6 +354,7 @@ document.addEventListener('DOMContentLoaded', function () {
         checkAuth();
         window.location.href = 'index.html';
     });
+    
     logoutIcon.addEventListener('click', function () {
         console.log('🔴 Выход: удаляем пользователя...');
         localStorage.removeItem('user');
@@ -207,6 +366,7 @@ document.addEventListener('DOMContentLoaded', function () {
         console.log('➡️ Перенаправляем на index.html');
         window.location.href = 'index.html';
     });
+
 
     // Открытие/закрытие настроек
     if (openSettings && settingsSection) {
@@ -229,13 +389,22 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 });
-// открытие чата и закрытие его 
 document.querySelectorAll('.chat-toggle').forEach(button => {
-    button.addEventListener('click', () => {
+    button.addEventListener('click', (e) => {
+        e.stopPropagation();
         document.querySelector('.chat-container').classList.toggle('active');
     });
 });
 
+// Закрытие чата при клике вне его области
+document.addEventListener('click', (e) => {
+    const chatContainer = document.querySelector('.chat-container');
+    if (chatContainer.classList.contains('active') && 
+        !e.target.closest('.chat-container') && 
+        !e.target.closest('.chat-toggle')) {
+        chatContainer.classList.remove('active');
+    }
+});
 document.addEventListener('DOMContentLoaded', loadRecommendations);
 async function loadRecommendations() {
     try {
@@ -293,6 +462,23 @@ async function loadRecommendations() {
         console.error('Ошибка загрузки книг:', error);
     }
 }
+
+document.addEventListener('DOMContentLoaded', function () {
+    const addBookButton = document.getElementById('add-book-button');
+    if (addBookButton) {
+        addBookButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            // Проверяем авторизацию перед переходом
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user) {
+                alert('Для добавления книги необходимо авторизоваться!');
+                return;
+            }
+            window.location.href = 'upload.html';
+        });
+    }
+})
+
 
 async function fetchUserBookmarks(userId) {
     try {
@@ -386,8 +572,7 @@ if (user) {
    // alert('Пользователь не авторизован.');
 }
 
-console.log('Пользователь:', user); // Логируем объект пользователя
-console.log('Книга:', book); // Логируем объект книги
+/* console.log('Книга:', book); // Логируем объект книги */
 
 if (user) {
     if (!user.bookmarks) {
@@ -497,81 +682,227 @@ async function removeFromBookmarks(bookId) {
     }
 }
 
-document.addEventListener('DOMContentLoaded', function () {
-    const avatarUpload = document.getElementById('avatar-upload');
-    const changeAvatarButton = document.getElementById('change-avatar');
+async function loadBooks() {
+    try {
+        const response = await fetch('/api/books');
+        const books = await response.json();
+        
+        const booksContainer = document.getElementById('books');
+        booksContainer.innerHTML = '';
+        
+        books.forEach(book => {
+            const bookCard = document.createElement('div');
+            bookCard.className = 'book-card';
+            bookCard.innerHTML = `
+                <button class="bookmark-button" data-book-id="${book.id}">❤</button>
+                <img src="${book.cover_url}" alt="${book.title}" class="book-cover">
+                <h3 class="book-title">${book.title}</h3>
+                <p class="book-author">${book.author}</p>
+                <div class="book-rating">${generateRatingStars(book.rating)}</div>
+            `;
+            booksContainer.appendChild(bookCard);
+        });
+        
+        // Проверяем, какие книги уже в закладках (если пользователь авторизован)
+        if (currentUser) {
+            checkBookmarksStatus(currentUser.id);
+        }
+    } catch (error) {
+        console.error('Ошибка при загрузке книг:', error);
+    }
+}
 
-    // Обработчик для кнопки "Изменить аватарку"
-    changeAvatarButton.addEventListener('click', function () {
-        console.log('Кнопка "Изменить аватарку" нажата'); // Логируем нажатие кнопки
-        avatarUpload.click(); // Открываем диалог выбора файла
-    });
-
-    // Обработчик для загрузки файла
-    avatarUpload.addEventListener('change', async function (event) {
-        const file = event.target.files[0];
-        if (file) {
-            console.log('Файл выбран:', file.name); // Логируем имя файла
-            const formData = new FormData();
-            formData.append('avatar', file);
-
-            try {
-                const response = await fetch('/api/upload-avatar', {
-                    method: 'POST',
-                    body: formData,
-                });
-
-                const data = await response.json();
-                if (response.ok) {
-                    console.log('Аватарка успешно загружена:', data.avatarUrl); // Логируем успешную загрузку
-                    document.getElementById('profile-avatar').src = data.avatarUrl; // Обновляем аватарку
-                    alert('Аватарка успешно обновлена!');
-                } else {
-                    console.error('Ошибка при загрузке аватарки:', data.error); // Логируем ошибку
-                    alert('Ошибка при загрузке аватарки: ' + data.error);
-                }
-            } catch (error) {
-                console.error('Ошибка при загрузке аватарки:', error); // Логируем ошибку
-                alert('Ошибка при загрузке аватарки');
+// Функция для проверки статуса закладок
+async function checkBookmarksStatus(userId) {
+    try {
+        const response = await fetch(`/api/bookmarks/${userId}`);
+        const bookmarks = await response.json();
+        
+        bookmarks.forEach(book => {
+            const button = document.querySelector(`.bookmark-button[data-book-id="${book.id}"]`);
+            if (button) {
+                button.classList.add('active');
             }
+        });
+    } catch (error) {
+        console.error('Ошибка при проверке закладок:', error);
+    }
+}
+
+// Функция для генерации звезд рейтинга
+function generateRatingStars(rating) {
+    const fullStars = '★'.repeat(Math.floor(rating));
+    const emptyStars = '☆'.repeat(5 - Math.ceil(rating));
+    return fullStars + emptyStars;
+}
+
+// Обработчик клика по кнопке закладки
+document.addEventListener('click', async function(e) {
+    if (e.target.classList.contains('bookmark-button')) {
+        const button = e.target;
+        const bookId = button.dataset.bookId;
+        const userId = currentUser?.id; // Предполагаем, что currentUser содержит данные авторизованного пользователя
+        
+        if (!userId) {
+            showNotification('Для добавления в закладки необходимо авторизоваться', 'error');
+            return;
+        }
+        
+        try {
+            if (button.classList.contains('active')) {
+                // Удаляем из закладок
+                const response = await fetch('/api/bookmarks', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ userId, bookId })
+                });
+                
+                if (response.ok) {
+                    button.classList.remove('active');
+                    showNotification('Книга удалена из закладок', 'success');
+                }
+            } else {
+                // Добавляем в закладки
+                const response = await fetch('/api/bookmarks', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ userId, bookId })
+                });
+                
+                if (response.ok) {
+                    button.classList.add('active');
+                    showNotification('Книга добавлена в закладки', 'success');
+                }
+            }
+            
+            // Анимация
+            button.classList.add('pulse');
+            setTimeout(() => button.classList.remove('pulse'), 500);
+        } catch (error) {
+            console.error('Ошибка при обновлении закладок:', error);
+            showNotification('Ошибка при обновлении закладок', 'error');
+        }
+    }
+});
+
+// Функция для показа уведомлений
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.classList.add('fade-out');
+        setTimeout(() => notification.remove(), 500);
+    }, 3000);
+}
+
+async function loadUserBooks(userId) {
+    try {
+        const response = await fetch(`http://localhost:5000/api/user-books/${userId}`);
+        const books = await response.json();
+        
+        const booksGrid = document.getElementById('user-books-grid');
+        if (!booksGrid) {
+            console.error('Элемент #user-books-grid не найден!');
+            return;
+        }
+
+        // Полная очистка и перестроение HTML
+        booksGrid.innerHTML = '';
+        
+        if (books.length === 0) {
+            booksGrid.innerHTML = '<p class="no-books">У вас пока нет добавленных книг</p>';
+            return;
+        }
+
+        books.forEach(book => {
+            const bookCard = document.createElement('div');
+            bookCard.className = 'book-card-small';
+            bookCard.innerHTML = `
+                <img src="${book.cover_url || 'default-cover.jpg'}" 
+                     alt="${book.title}"
+                     class="book-cover-small"
+                     onclick="window.location.href='book.html?id=${book.id}'">
+                <div class="book-title-small">${book.title}</div>
+            `;
+            booksGrid.appendChild(bookCard);
+        });
+
+        // Принудительное применение стилей (на время отладки)
+        booksGrid.style.display = 'grid';
+        booksGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(120px, 1fr))';
+        booksGrid.style.gap = '15px';
+        booksGrid.style.marginTop = '10px';
+
+    } catch (error) {
+        console.error('Ошибка загрузки книг:', error);
+        const grid = document.getElementById('user-books-grid');
+        if (grid) grid.innerHTML = '<p class="error">Ошибка загрузки списка книг</p>';
+    }
+}
+// Инициализация после загрузки DOM
+function initProfilePage() {
+    if (!document.getElementById('user-books-grid')) return; // Если не на странице профиля
+    
+    if (typeof loadCurrentUserProfile === 'function') {
+        loadCurrentUserProfile();
+    } else {
+        console.error('Функция loadCurrentUserProfile не найдена!');
+        emergencyLoadBooks();
+    }
+}
+
+function emergencyLoadBooks() {
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user) return;
+    
+    fetch(`http://localhost:5000/api/user-books/${user.id}`)
+        .then(r => r.json())
+        .then(books => {
+            const grid = document.getElementById('user-books-grid');
+            if (grid) grid.innerHTML = books.map(b => 
+                `<div>${b.title}</div>`
+            ).join('');
+        });
+}
+
+// Запускаем инициализацию при загрузке
+document.addEventListener('DOMContentLoaded', initProfilePage);
+
+function requestExchange(bookId) {
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user) {
+        alert('Для запроса обмена необходимо войти в систему');
+        return;
+    }
+
+    fetch('http://localhost:5000/api/exchange-request', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            requester_id: user.id,
+            book_id: bookId,
+            message: 'Хочу обменяться этой книгой'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Запрос на обмен отправлен!');
         } else {
-            console.log('Файл не выбран'); // Логируем, если файл не выбран
+            alert('Ошибка: ' + data.message);
         }
+    })
+    .catch(error => {
+        console.error('Ошибка:', error);
+        alert('Произошла ошибка при отправке запроса');
     });
-});
-
-document.addEventListener('DOMContentLoaded', function () {
-    const editAboutMeButton = document.getElementById('edit-about-me');
-    const aboutMeText = document.getElementById('about-me-text');
-
-    // Обработчик для кнопки "Редактировать"
-    editAboutMeButton.addEventListener('click', async function () {
-        const newAboutMe = prompt('Расскажите о себе:', aboutMeText.textContent);
-        if (newAboutMe !== null) {
-            try {
-                const user = JSON.parse(localStorage.getItem('user'));
-                if (!user) {
-                    //alert('Пользователь не авторизован.');
-                    return;
-                }
-
-                const response = await fetch('/api/update-about-me', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId: user.id, aboutMe: newAboutMe }),
-                });
-
-                const data = await response.json();
-                if (response.ok) {
-                    aboutMeText.textContent = newAboutMe; // Обновляем текст "О себе"
-                    alert('Информация о себе успешно обновлена!');
-                } else {
-                    alert('Ошибка при обновлении информации: ' + data.error);
-                }
-            } catch (error) {
-                console.error('Ошибка при обновлении информации:', error);
-                alert('Ошибка при обновлении информации');
-            }
-        }
-    });
-});
+}

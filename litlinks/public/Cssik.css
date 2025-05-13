@@ -1,12 +1,10 @@
-/* Общие стили */
 body {
-    font-family: Arial, sans-serif;
+    font-family: "Tagesschrift", system-ui;
     margin: 0;
     padding: 0;
-    background-color: #000;
+    background-color: #eebfbf;
     color: #fff;
 }
-
 header {
     display: flex;
     justify-content: space-between;
@@ -15,62 +13,98 @@ header {
     background-color: #333;
     position: relative;
 }
-
 .logo .site-title {
     color: #fff;
     text-decoration: none;
     font-size: 24px;
     font-weight: bold;
 }
-
 .search-bar {
     display: flex;
     align-items: center;
-    flex-grow: 1;
-    margin: 0 20px;
+    justify-content: center;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40%;
+    min-width: 300px;
+    max-width: 600px;
+    z-index: 0;
 }
-
-.search-bar input {
-    padding: 8px;
-    border: none;
-    border-radius: 5px;
-    margin-right: 5px;
-    width: 100%;
-    max-width: 400px;
+.search-bar input::placeholder {
+    color: rgba(255, 255, 255, 0.7);
 }
-
 .search-bar button {
-    background: none;
+    background: linear-gradient(135deg, #6e45e2 0%, #89d4cf 100%);
     border: none;
-    color: #fff;
-    font-size: 18px;
+    color: white;
+    width: 100px;
+    height: 50px;
+    border-radius: 10%;
+    margin-left: -100px;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 }
-
+.search-bar button:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 15px rgba(110, 69, 226, 0.4);
+}
+.search-bar button:active {
+    transform: scale(0.95);
+}
+[data-theme="light"] .search-bar input {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: #333;
+    border-color: rgba(110, 69, 226, 0.2);
+}
+[data-theme="light"] .search-bar input::placeholder {
+    color: rgba(0, 0, 0, 0.5);
+}
+[data-theme="light"] .search-bar input:focus {
+    background-color: rgba(0, 0, 0, 0.08);
+}
+@media (max-width: 768px) {
+    .search-bar {
+        position: static;
+        transform: none;
+        width: 90%;
+        margin: 10px auto;
+        order: 3;
+        flex: 0 0 100%;
+    }
+    
+    .search-bar input {
+        padding: 10px 15px;
+    }
+}
 .menu-icon {
     font-size: 24px;
     cursor: pointer;
     margin-left: 10px;
 }
-/* Стиль СЛАЙД БАРА */
 .sidebar {
     position: fixed;
     top: 0;
-    right: -250px;
-    width: 250px;
-    height: 100%;
-    background-color: #444;
-    transition: right 0.3s ease;
+    right: -300px;
+    width: 300px;
+    height: 100vh;
+    background: linear-gradient(145deg, #3a3a3a 0%, #2a2a2a 100%);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     padding: 20px;
-    box-shadow: -2px 0 5px rgba(0, 0, 0, 0.5);
+    box-shadow: -5px 0 15px rgba(0, 0, 0, 0.3);
     visibility: hidden;
+    z-index: 1000;
+    overflow-y: auto;
+    border-left: 1px solid #6e45e2;
 }
-
 .sidebar.active {
     right: 0;
     visibility: visible;
 }
-
 .close-menu {
     background: none;
     border: none;
@@ -81,67 +115,84 @@ header {
     top: 10px;
     right: 10px;
 }
-
+.close-menu:hover {
+    transform: rotate(90deg);
+    background-color: rgba(110, 69, 226, 0.2);
+}
+.sidebar-menu {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+.sidebar-menu li {
+    margin-bottom: 12px;
+    position: relative;
+    overflow: hidden;
+}
+.sidebar-menu li::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(110, 69, 226, 0.1), transparent);
+    transition: all 0.6s ease;
+}
+.sidebar-menu li:hover::before {
+    left: 100%;
+}
 .sidebar ul {
     list-style-type: none;
     padding: 0;
     margin-top: 30px;
 }
-
 .sidebar ul li {
     margin-bottom: 10px;
 }
-
-/* Общие стили для всех кнопок и ссылок в сайдбаре */
 .sidebar ul li a,
 .sidebar ul li button {
     display: block;
     width: calc(100% - 30px);
     padding: 8px 12px;
     margin-bottom: 10px;
-    background-color: #555;
+    background: linear-gradient(145deg, #2e2a2a 0%, #2a2a2a 100%);
     color: #fff;
     text-align: left;
     text-decoration: none;
     border: none;
-    border-radius: 5px;
+    border-radius: 10px;
     font-size: 16px;
     cursor: pointer;
     transition: background-color 0.3s ease;
 }
-
 .sidebar ul li a:hover,
 .sidebar ul li button:hover {
     background-color: #777;
 }
-
-/* Стили для кнопок с иконками */
 .sidebar ul li a.profile-button,
 .sidebar ul li button.logout-icon {
     display: flex;
     align-items: center;
     gap: 10px;
 }
-
-/* Стили для кнопки выхода */
 .sidebar ul li button.logout-icon {
-    background-color: #ff4444;
+    background-color: #ff4441;
 }
 
 .sidebar ul li button.logout-icon:hover {
     background-color: #cc0000;
 }
-
-/* Стили для кнопок "Войти" и "Регистрация" */
 #auth-link {
     display: flex;
-    gap: 10px;
+    gap: 5px;
     margin-bottom: 10px;
+    flex-wrap: nowrap;
+    align-items: center;
 }
-
 #auth-link a {
     display: inline-block;
-    padding: 8px 12px;
+    padding: 5px 8px;
     border-radius: 5px;
     background-color: #555;
     color: #fff;
@@ -149,15 +200,13 @@ header {
     transition: background-color 0.3s ease;
     flex: 1;
     text-align: center;
+    
 }
-
 #auth-link a:hover {
     background-color: #777;
 }
-
-/* Стили для кнопок "Профиль" и "Настройки" */
 .profile-button, #open-settings {
-    background: #555;
+    background: linear-gradient(145deg, #2e2a2a 0%, #2a2a2a 100%);
     border: none;
     color: #fff;
     font-size: 16px;
@@ -166,25 +215,23 @@ header {
     align-items: center;
     width: calc(100% - 30px);
     padding: 8px 12px;
-    border-radius: 5px;
+    border-radius: 10px;
     transition: background-color 0.3s ease;
 }
-
 .profile-button:hover, #open-settings:hover {
     background-color: #777;
     text-decoration: none;
 }
-
-/* Скрытые элементы */
 .hidden {
-    display: none !important; /* Добавляем !important для приоритета */
-}
-/* Основной контент */
-main {
-    padding: 20px;
-    margin-top: 60px;
+    display: none !important; 
 }
 
+
+main {
+    color: #bfbfbf;
+    padding: 20px;
+    margin-top: 20px;
+}
 .profile-info, .settings {
     max-width: 600px;
     margin: 0 auto;
@@ -192,27 +239,21 @@ main {
     padding: 20px;
     border-radius: 5px;
 }
-
 .profile-info h2, .settings h2 {
     margin-top: 0;
 }
-
 .user-details p {
     margin: 10px 0;
 }
-
 .about-me {
     margin-top: 20px;
 }
-
 .about-me h3 {
     margin-bottom: 10px;
 }
-
 #about-me-text {
     font-style: italic;
 }
-
 #edit-about-me {
     margin-top: 10px;
     padding: 5px 10px;
@@ -222,20 +263,16 @@ main {
     border-radius: 5px;
     cursor: pointer;
 }
-
 #edit-about-me:hover {
     background-color: #777;
 }
-
 .settings-form {
     margin-top: 20px;
 }
-
 .settings-form label {
     display: block;
     margin-bottom: 5px;
 }
-
 .settings-form input {
     width: 100%;
     padding: 8px;
@@ -243,7 +280,6 @@ main {
     border: none;
     border-radius: 5px;
 }
-
 .settings-form button {
     padding: 10px;
     background-color: #555;
@@ -252,25 +288,19 @@ main {
     border-radius: 5px;
     cursor: pointer;
 }
-
 .settings-form button:hover {
     background-color: #777;
 }
-
-/* Список книг */
 .book-list ul {
     list-style-type: none;
     padding: 0;
 }
-
 .book-list ul li {
     background-color: #555;
     padding: 10px;
     margin-bottom: 5px;
     border-radius: 5px;
 }
-
-/* Подвал */
 footer {
     text-align: center;
     padding: 10px;
@@ -280,7 +310,7 @@ footer {
     width: 100%;
 }
 
-/* Стили для модальных окон */
+
 .modal {
     display: none;
     position: fixed;
@@ -293,11 +323,9 @@ footer {
     align-items: center;
     z-index: 1000;
 }
-
 .modal.active {
     display: flex;
 }
-
 .modal-content {
     background-color: #444;
     padding: 30px;
@@ -309,7 +337,6 @@ footer {
     animation: fadeIn 0.3s ease;
     position: relative; /* Это важно */
 }
-
 @keyframes fadeIn {
     from {
         opacity: 0;
@@ -320,20 +347,17 @@ footer {
         transform: translateY(0);
     }
 }
-
 .modal-content h2 {
     margin-bottom: 20px;
     font-size: 24px;
     color: #fff;
 }
-
 .modal-content form {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 15px; /* Добавляем отступы между элементами формы */
+    gap: 15px;
 }
-
 .modal-content input {
     width: 100%;
     padding: 12px;
@@ -343,11 +367,9 @@ footer {
     color: #fff;
     font-size: 16px;
 }
-
 .modal-content input::placeholder {
     color: #888;
 }
-
 .modal-content button[type="submit"] {
     width: 100%;
     padding: 14px;
@@ -359,64 +381,178 @@ footer {
     cursor: pointer;
     transition: background-color 0.3s ease;
 }
-
 .modal-content button[type="submit"]:hover {
     background-color: #777;
 }
-
-/* Стили для кнопки закрытия */
 .close-modal {
     background: none;
     border: none;
     color: #fff;
-    font-size: 20px; /* Размер крестика */
+    font-size: 20px; 
     cursor: pointer;
     position: absolute;
-    top: 15px; /* Отступ сверху */
-    right: 15px; /* Отступ справа */
-    z-index: 1001; /* Чтобы кнопка была поверх содержимого */
-    padding: 5px; /* Добавляем отступы для удобства */
-    line-height: 1; /* Убираем лишний отступ вокруг текста */
-    opacity: 0.8; /* Легкая прозрачность */
-    transition: opacity 0.2s ease; /* Плавное изменение прозрачности */
+    top: 15px; 
+    right: 15px; 
+    z-index: 1001; 
+    padding: 5px; 
+    line-height: 1; 
+    opacity: 0.8; 
+    transition: opacity 0.2s ease; 
 }
-
 .close-modal:hover {
-    opacity: 1; /* Убираем прозрачность при наведении */
+    opacity: 1; 
 }
 
-
-/* Стили для страницы закладок */
-.bookmarks ul {
-    list-style-type: none;
+.bookmarks {
+    max-width: 1200px;
+    margin: 10px auto;
+    padding: 10px;
+}
+.bookmarks h2 {
+    text-align: center;
+    font-size: 32px;
+    margin-bottom: 31px;
+    color: #6e45e2;
+    position: relative;
+    padding-bottom: 9px;
+}
+.bookmarks h2::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left:46%;
+    transform: translateX(0%);
+    width: 100px;
+    height: 3px;
+    background: linear-gradient(135deg, #6e45e2 0%, #89d4cf 100%);
+    border-radius: 3px;
+}
+.bookmarks-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 25цpx;
     padding: 0;
 }
-
-.bookmarks ul li {
-    background-color: #555;
-    padding: 10px;
-    margin-bottom: 10px;
-    border-radius: 5px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.bookmarks ul li button {
-    background-color: #ff4444;
-    border: none;
-    color: #fff;
-    padding: 5px 10px;
-    border-radius: 5px;
+.bookmark-card {
+    background-color: #222;
+    border-radius: 15px;
+    padding: 20px;
+    text-align: center;
+    transition: all 0.3s ease;
     cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+.bookmark-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+}
+.bookmark-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 5px;
+    background: linear-gradient(135deg, #6e45e2 0%, #89d4cf 100%);
+}
+.bookmark-card img {
+    width: 100%;
+    height: 250px;
+    object-fit: cover;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    transition: transform 0.3s ease;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+.bookmark-card:hover img {
+    transform: scale(1.05);
+}
+.bookmark-card h3 {
+    font-size: 1.2em;
+    color: #fff;
+    margin: 10px 0;
+    font-weight: bold;
+    transition: color 0.3s ease;
+}
+.bookmark-card:hover h3 {
+    color: #89d4cf;
+}
+.bookmark-card p {
+    color: #ccc;
+    font-size: 0.9em;
+    margin-bottom: 10px;
+}
+.remove-button {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: #fff;
+    border: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    opacity: 0;
+}
+.bookmark-card:hover .remove-button {
+    opacity: 1;
+}
+.remove-button:hover {
+    background-color: #ff4d4d;
+    transform: scale(1.1);
+}
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+}
+.bookmark-card.removing {
+    animation: fadeOut 0.3s ease forwards;
+}
+.empty-bookmarks {
+    text-align: center;
+    padding: 50px;
+    color: #888;
+    font-size: 1.2em;
+}
+.empty-bookmarks svg {
+    width: 100px;
+    height: 100px;
+    margin-bottom: 20px;
+    fill: #555;
+}
+@media (max-width: 768px) {
+    .bookmarks-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 15px;
+    }
+    
+    .bookmark-card img {
+        height: 200px;
+    }
+    
+    .bookmark-card h3 {
+        font-size: 1em;
+    }
+    
+    .bookmark-card p {
+        font-size: 0.8em;
+    }
 }
 
-.bookmarks ul li button:hover {
-    background-color: #cc0000;
-}
 
-
-/* Стили чата */
 .chat-widget {
     position: fixed;
     bottom: 20px;
@@ -424,12 +560,9 @@ footer {
     z-index: 1000;
     transition: all 0.3s ease;
 }
-
-
 .chat-widget.shift {
-    right: 300px;
+    right: 350px;
 }
-
 .chat-toggle {
     background-color: #555;
     border: none;
@@ -442,11 +575,9 @@ footer {
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
     transition: background-color 0.3s;
 }
-
 .chat-toggle:hover {
     background-color: #777;
 }
-
 .chat-container {
     width: 210px;
     height: 400px;
@@ -461,20 +592,18 @@ footer {
     transition: all 0.3s ease;
     display: flex;
     flex-direction: column;
+    resize: none;
     align-items: center;
     justify-content: center;
 }
-
 .chat-container.active {
     opacity: 1;
     transform: scale(1);
     visibility: visible;
 }
-
 .chat-container.shift {
-    right: 300px;
+    right: 350px;
 }
-
 .chat-header {
     display: flex;
     justify-content: space-between;
@@ -483,13 +612,11 @@ footer {
     background-color: #444;
     border-radius: 10px 10px 0 0;
 }
-
 .chat-header h3 {
     margin: 0;
     font-size: 14px;
     color: #fff;
 }
-
 .close-chat {
     background: none;
     border: none;
@@ -498,78 +625,102 @@ footer {
     cursor: pointer;
     padding: 0;
 }
-
 .chat-messages {
+    flex: 1;
     height: 350px;
     overflow-y: auto;
     background-color: #222;
     
 }
-
 .chat-input {
     padding: 10px;
     background-color: #444;
     border-radius: 0 0 10px 10px;
-
+    display: flex;
+    flex-direction: column;
 }
-
-/* Остальные стили сообщений (из предыдущего ответа) остаются */
-/* Рекомендации */
+#message-input {
+    width: 90%;
+    min-height: 40px;
+    resize: none;
+    margin-bottom: 10px;
+    padding: 8px;
+    border-radius: 5px;
+    border: none;
+}
+#send-message {
+    align-self: flex-end;
+    padding: 5px 15px;
+    background-color: #555;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
 .recommendations {
     max-width: 1200px;
     margin: 0 auto;
     padding: 20px;
 }
-
 .recommendations h2 {
     text-align: center;
     color: #fff;
     margin-bottom: 30px;
 }
-
 .books-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 25px;
     padding: 0;
+    margin: 0 auto;
+    max-width: 1200px;
 }
-
 .book-card {
-    background-color: #333;
-    border-radius: 10px;
-    padding: 40px;
+    background-color: #222;
+    border-radius: 15px;
+    padding: 20px;
     text-align: center;
-    transition: transform 0.3s ease;
+    transition: all 0.3s ease;
     cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
 }
-
 .book-card:hover {
-    transform: translateY(-5px);
+    transform: translateY(-10px);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
 }
-
 .book-cover {
     width: 100%;
-    height: 200px;
+    height: 250px;
     object-fit: cover;
-    border-radius: 5px;
-    margin-bottom: 10px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    transition: transform 0.3s ease;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
 }
-
 .book-title {
-    font-size: 1.1em;
+    font-size: 1.2em;
     color: #fff;
     margin: 10px 0;
+    font-weight: bold;
+    transition: color 0.3s ease;
 }
-
+.book-card:hover .book-title {
+    color: #89d4cf;
+}
 .book-author {
     color: #ccc;
     font-size: 0.9em;
     margin-bottom: 10px;
 }
-
 .book-rating {
+    display: flex;
+    justify-content: center;
+    align-items: center;
     color: #ffd700;
     font-size: 0.9em;
+    margin-top: 10px;
 }
 .bookmark-item {
     display: flex;
@@ -579,40 +730,21 @@ footer {
     border: 1px solid #ccc;
     border-radius: 5px;
 }
-
 .book-cover {
     width: 200px;
     height: 150px;
     margin-right: 20px;
 }
-
 .bookmark-text {
     flex: 1;
 }
-
-.remove-button {
-    background-color: #ff4d4d;
-    color: white;
-    border: none;
-    padding: 5px 10px;
-    border-radius: 5px;
-    cursor: pointer;
-}
-
-.remove-button:hover {
-    background: darkred;
-}
-
-/* Стили для фильтра по жанру */
 .filter-genre {
     margin-bottom: 20px;
 }
-
 .filter-genre label {
     margin-right: 10px;
     color: #fff;
 }
-
 .filter-genre select {
     padding: 8px;
     border-radius: 5px;
@@ -620,15 +752,12 @@ footer {
     color: #fff;
     border: none;
 }
-
-/* Стили для сетки закладок */
 .bookmarks-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
     gap: 20px;
     padding: 0;
 }
-
 .bookmark-card {
     background-color: #333;
     border-radius: 10px;
@@ -638,11 +767,9 @@ footer {
     cursor: pointer;
     position: relative;
 }
-
 .bookmark-card:hover {
     transform: translateY(-5px);
 }
-
 .bookmark-card img {
     width: 100%;
     height: 250px;
@@ -650,19 +777,16 @@ footer {
     border-radius: 5px;
     margin-bottom: 10px;
 }
-
 .bookmark-card h3 {
     font-size: 1.1em;
     color: #fff;
     margin: 10px 0;
 }
-
 .bookmark-card p {
     color: #ccc;
     font-size: 0.9em;
     margin-bottom: 10px;
 }
-
 .remove-button {
     position: absolute;
     top: 10px;
@@ -674,7 +798,6 @@ footer {
     border-radius: 5px;
     cursor: pointer;
 }
-
 .remove-button:hover {
     background: darkred;
 }
@@ -693,33 +816,28 @@ header {
     background-color: #333;
     position: relative;
 }
-
 .logo {
     display: flex;
     align-items: center;
-    gap: 0px; /* Расстояние между логотипом и текстом */
+    gap: 0px; 
 }
-
 .logo-image {
-    width: 60px; /* Размер логотипа */
+    width: 60px;
     height: 60px;
-    border-radius: 50%; /* Круглый логотип (опционально) */
+    border-radius: 50%; 
 }
-
 .site-name {
     color: #fff;
     font-size: 30px;
     font-weight: bold;
 }
-
 .search-bar {
     display: flex;
     align-items: center;
     flex-grow: 1;
     margin: 0 20px;
-    max-width: 500px; /* Ограничиваем ширину поисковой строки */
+    max-width: 500px; 
 }
-
 .search-bar input {
     padding: 8px;
     border: none;
@@ -727,7 +845,6 @@ header {
     margin-right: 5px;
     width: 100%;
 }
-
 .search-bar button {
     background: none;
     border: none;
@@ -735,27 +852,25 @@ header {
     font-size: 18px;
     cursor: pointer;
 }
-
 .menu-icon {
     font-size: 30px;
     cursor: pointer;
     margin-left: 10px;
 }
-
 .avatar-section {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 30px;
     margin-bottom: 20px;
 }
-
 .avatar-image {
-    width: 100px;
-    height: 100px;
+    width: 150px;
+    height: 150px;
     border-radius: 50%;
     object-fit: cover;
+    border: 3px solid #6e45e2;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
 }
-
 #change-avatar {
     padding: 5px 10px;
     background-color: #555;
@@ -764,7 +879,1357 @@ header {
     border-radius: 5px;
     cursor: pointer;
 }
-
 #change-avatar:hover {
     background-color: #777;
+}
+
+:root {
+    --background-color: #000; 
+    --text-color: #fff; 
+    --header-bg: #333; 
+    --sidebar-bg: #444; 
+    --button-bg: #555; 
+    --button-hover-bg: #777; 
+    --transition-duration: 0.6s;
+    --transition-timing: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+
+[data-theme="light"] {
+    --background-color: #fff;
+    --text-color: #000;
+    --header-bg: #ffedd2;
+    --sidebar-bg: #e9ecef;
+    --button-bg: #007bff;
+    --button-hover-bg: #0056b3;
+}
+body {
+    background-color: var(--background-color);
+    color: var(--text-color);
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+[data-theme="dark"] {
+    --bg-color: #121212;
+    --text-color: #ffffff;
+    --accent-color: #bb86fc;
+}
+
+header {
+    background-color: var(--header-bg);
+}
+.sidebar {
+    background-color: var(--sidebar-bg);
+}
+button, .button {
+    background-color: #444;
+    border-radius: 5px;
+    border-left: 3px solid #6e45e2;
+}
+button:hover, .button:hover {
+    background-color: var(--button-hover-bg);
+}
+
+.theme-toggle {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    position: relative;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    color: #fff;
+    font-size: 20px;
+}
+
+
+.header-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;  
+    margin-left: auto; 
+}
+.menu-icon {
+    font-size: 24px;
+    cursor: pointer;
+    padding: 5px;
+}
+body, .site-name, h1, h2, h3 {
+    transition: color 0.3s ease;
+}
+.profile-info {
+    max-width: 800px;
+    margin: 30px auto;
+    background-color: #222;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+}
+.profile-info::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 120px;
+    background: linear-gradient(135deg, #6e45e2 0%, #89d4cf 100%);
+    z-index: 0;
+}
+.profile-info h2 {
+    position: relative;
+    color: white;
+    margin-bottom: 30px;
+    font-size: 28px;
+    z-index: 1;
+}
+.user-details {
+    position: relative;
+    z-index: 1;
+    margin-top: 80px;
+}
+.avatar-section {
+    display: flex;
+    align-items: center;
+    gap: 30px;
+    margin-bottom: 20px;
+}
+.avatar-image {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 5px solid #333;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+    margin-top: -75px;
+    background-color: #444;
+}
+.avatar-image:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+}
+#change-avatar {
+    margin-top: 15px;
+    padding: 8px 20px;
+    background: linear-gradient(135deg, #6e45e2 0%, #89d4cf 100%);
+    color: white;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+}
+#change-avatar:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+.user-details p {
+    font-size: 16px;
+    line-height: 1.6;
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #444;
+}
+.user-details p strong {
+    color: #89d4cf;
+    font-weight: normal;
+    display: inline-block;
+    width: 100px;
+}
+.user-details p span {
+    color: #ddd;
+}
+.about-me {
+    background-color: #333;
+    padding: 20px;
+    border-radius: 10px;
+    margin-top: 30px;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.2);
+}
+.about-me h3 {
+    margin-top: 0;
+    color: #6e45e2;
+    font-size: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #444;
+}
+#about-me-text {
+    min-height: 80px;
+    padding: 10px;
+    background-color: #444;
+    border-radius: 5px;
+    border-left: 3px solid #6e45e2;
+}
+#edit-about-me {
+    margin-top: 15px;
+    padding: 8px 20px;
+    background: transparent;
+    color: #89d4cf;
+    border: 1px solid #89d4cf;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+#edit-about-me:hover {
+    background: rgba(137, 212, 207, 0.1);
+    transform: translateY(-2px);
+}
+@media (max-width: 768px) {
+    .profile-info {
+        margin: 15px;
+        padding: 15px;
+    }
+    
+    .avatar-image {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid #6e45e2;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    }
+    .user-details p {
+        font-size: 14px;
+    }
+    
+    .user-details p strong {
+        width: 80px;
+    }
+}
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+.modal.active {
+    display: flex;
+}
+.modal-content {
+    background-color: #333;
+    padding: 25px;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 500px;
+    position: relative;
+}
+.close-modal {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 24px;
+    cursor: pointer;
+}
+.avatar-upload-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+.avatar-preview {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 3px solid #6e45e2;
+}
+.avatar-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.upload-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    width: 100%;
+}
+.file-label {
+    display: inline-block;
+    padding: 10px 15px;
+    background-color: #6e45e2;
+    color: white;
+    border-radius: 5px;
+    cursor: pointer;
+    text-align: center;
+    transition: background-color 0.3s;
+}
+.file-label:hover {
+    background-color: #5a35cc;
+}
+#avatar-input {
+    display: none;
+}
+.upload-btn {
+    padding: 10px 15px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+.upload-btn:hover {
+    background-color: #3e8e41;
+}
+.notification {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 15px 25px;
+    border-radius: 5px;
+    color: white;
+    z-index: 1000;
+    transition: opacity 0.5s;
+}
+.notification.success {
+    background-color: #4CAF50;
+}
+.notification.error {
+    background-color: #f44336;
+}
+.notification.info {
+    background-color: #2196F3;
+}
+.fade-out {
+    opacity: 0;
+}
+.book-list h2 {
+    text-align: center;
+    font-size: 32px;
+    margin-bottom: 30px;
+    color: #6e45e2;
+    position: relative;
+    padding-bottom: 10px;
+}
+.book-list h2::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100px;
+    height: 3px;
+    background: linear-gradient(135deg, #6e45e2 0%, #89d4cf 100%);
+    border-radius: 3px;
+}
+.book-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 5px;
+    background: linear-gradient(135deg, #6e45e2 0%, #89d4cf 100%);
+}
+.book-card:hover .book-cover {
+    transform: scale(1.05);
+}
+.bookmark-button {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: #fff;
+    border: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    opacity: 0;
+}
+.book-card:hover .bookmark-button {
+    opacity: 1;
+}
+.bookmark-button:hover {
+    background-color: #6e45e2;
+    transform: scale(1.1);
+}
+@media (max-width: 768px) {
+    .books-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 15px;
+    }
+    
+    .book-cover {
+        height: 200px;
+    }
+    
+    .book-title {
+        font-size: 1em;
+    }
+    
+    .book-author {
+        font-size: 0.8em;
+    }
+}
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.book-card {
+    animation: fadeIn 0.5s ease forwards;
+    opacity: 0;
+}
+.book-card:nth-child(1) { animation-delay: 0.1s; }
+.book-card:nth-child(2) { animation-delay: 0.2s; }
+.book-card:nth-child(3) { animation-delay: 0.3s; }
+.book-card:nth-child(4) { animation-delay: 0.4s; }
+.book-card:nth-child(5) { animation-delay: 0.5s; }
+.book-card:nth-child(6) { animation-delay: 0.6s; }
+.book-card:nth-child(7) { animation-delay: 0.7s; }
+.book-card:nth-child(8) { animation-delay: 0.8s; }
+.book-card:nth-child(9) { animation-delay: 0.9s; }
+.book-card:nth-child(10) { animation-delay: 1.0s; }
+.logo {
+    display: flex;
+    align-items: center;
+}
+.logo a {
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+}
+.logo-icon {
+    width: 40px;
+    height: 40px;
+    margin-right: 10px;
+    transition: transform 0.3s ease;
+}
+.logo-icon path {
+    fill: #6e45e2;
+    stroke: #fff;
+    stroke-width: 2;
+    transition: all 0.3s ease;
+}
+.logo-text {
+    position: relative;
+    font-family: "Tagesschrift", system-ui;
+    font-size: 28px;
+    font-weight: 800;
+    color: transparent;
+    text-shadow: 
+        -1px -1px 0 #6e45e2,  
+        1px -1px 0 #6e45e2,
+        -1px 1px 0 #6e45e2,
+        1px 1px 0 #6e45e2;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 0 8px;
+}
+.logo-text::before {
+    content: attr(data-text);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    color: #fff;
+    z-index: -1;
+}
+.logo:hover .logo-icon {
+    transform: rotate(15deg);
+}
+.logo:hover .logo-icon path {
+    fill: #89d4cf;
+    stroke: #6e45e2;
+}
+.logo:hover .logo-text {
+    text-shadow: 
+        -1px -1px 0 #89d4cf,  
+        1px -1px 0 #89d4cf,
+        -1px 1px 0 #89d4cf,
+        1px 1px 0 #89d4cf;
+}
+[data-theme="light"] .logo-text {
+    text-shadow: 
+        -1px -1px 0 #6e45e2,  
+        1px -1px 0 #6e45e2,
+        -1px 1px 0 #6e45e2,
+        1px 1px 0 #6e45e2;
+}
+[data-theme="light"] .logo-text::before {
+    color: #000;
+}
+[data-theme="dark"] .logo-text {
+    text-shadow: 
+        -1px -1px 0 #89d4cf,  
+        1px -1px 0 #89d4cf,
+        -1px 1px 0 #89d4cf,
+        1px 1px 0 #89d4cf;
+}
+[data-theme="dark"] .logo-text::before {
+    color: #fff;
+}
+.search-modal-content {
+    width: 90%;
+    max-width: 800px;
+    padding: 25px;
+    background: linear-gradient(145deg, #3a3a3a 0%, #2a2a2a 100%);
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+.search-bar-modal {
+    display: flex;
+    margin-bottom: 20px;
+    position: relative;
+}
+.search-bar-modal input {
+    flex: 1;
+    padding: 15px 20px;
+    border: none;
+    border-radius: 30px;
+    background-color: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    color: #fff;
+    font-size: 16px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+    border: 1px solid rgba(110, 69, 226, 0.3);
+}
+.search-bar-modal input:focus {
+    outline: none;
+    background-color: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 4px 20px rgba(110, 69, 226, 0.3);
+    border-color: #6e45e2;
+}
+.search-bar-modal button {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #6e45e2;
+    cursor: pointer;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+.search-bar-modal button:hover {
+    color: #89d4cf;
+    transform: translateY(-50%) scale(1.1);
+}
+.search-tabs {
+    display: flex;
+    border-bottom: 2px solid #444;
+    margin-bottom: 20px;
+}
+.search-tab {
+    padding: 10px 20px;
+    background: none;
+    border: none;
+    color: #aaa;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.3s ease;
+}
+.search-tab.active {
+    color: #6e45e2;
+}
+.search-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, #6e45e2, #89d4cf);
+}
+.search-tab:hover {
+    color: #fff;
+}
+.search-tab-content {
+    display: none;
+    max-height: 60vh;
+    overflow-y: auto;
+    padding-right: 10px;
+}
+.search-tab-content.active {
+    display: block;
+}
+.search-result-item {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    margin-bottom: 10px;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+.search-result-item:hover {
+    background-color: rgba(110, 69, 226, 0.2);
+    transform: translateX(5px);
+}
+.book-cover-sm {
+    width: 50px;
+    height: 70px;
+    object-fit: cover;
+    border-radius: 5px;
+    margin-right: 15px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+}
+.user-avatar-sm {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-right: 15px;
+    border: 2px solid #6e45e2;
+}
+.search-result-info {
+    flex: 1;
+}
+.search-result-title {
+    font-weight: bold;
+    color: #fff;
+    margin-bottom: 5px;
+}
+.search-result-author {
+    font-size: 14px;
+    color: #aaa;
+}
+.empty-results {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+    font-size: 16px;
+}
+.search-tab-content::-webkit-scrollbar {
+    width: 6px;
+}
+.search-tab-content::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+}
+.search-tab-content::-webkit-scrollbar-thumb {
+    background: linear-gradient(#6e45e2, #89d4cf);
+    border-radius: 3px;
+}
+[data-theme="light"] .search-modal-content {
+    background: linear-gradient(145deg, #f5f5f5 0%, #e0e0e0 100%);
+}
+[data-theme="light"] .search-bar-modal input {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: #333;
+}
+[data-theme="light"] .search-bar-modal input::placeholder {
+    color: rgba(0, 0, 0, 0.5);
+}
+[data-theme="light"] .search-result-item {
+    background-color: rgba(0, 0, 0, 0.03);
+}
+[data-theme="light"] .search-result-item:hover {
+    background-color: rgba(110, 69, 226, 0.1);
+}
+[data-theme="light"] .search-result-title {
+    color: #333;
+}
+.search-text {
+    color: #fff;
+    margin-left: 5px;
+    font-size: 16px;
+    transition: color 0.3s ease;
+    cursor: pointer;
+}
+
+.search-bar:hover .search-text {
+    color: #6e45e2;
+}
+
+[data-theme="light"] .search-text {
+    color: #000;
+}
+
+[data-theme="light"] .search-bar:hover .search-text {
+    color: #89d4cf;
+}
+
+@media (max-width: 768px) {
+    .search-text {
+        display: none;
+    }
+}
+
+.loading {
+    text-align: center;
+    padding: 20px;
+    color: #aaa;
+    font-style: italic;
+}
+
+.error {
+    text-align: center;
+    padding: 20px;
+    color: #ff4441;
+}
+
+.search-result-item {
+    transition: background-color 0.2s ease;
+}
+
+.search-result-item:hover {
+    background-color: rgba(110, 69, 226, 0.1);
+}
+.profile-avatar {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #6e45e2;
+}
+
+#message-button {
+    background: linear-gradient(135deg, #6e45e2 0%, #89d4cf 100%);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 15px;
+}
+
+.error-message {
+    color: #ff4441;
+    text-align: center;
+    font-size: 18px;
+    margin-top: 50px;
+}
+#add-friend-button {
+    background: linear-gradient(135deg, #6e45e2 0%, #89d4cf 100%);
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 30px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    height: fit-content;
+    white-space: nowrap;
+}
+
+#add-friend-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(110, 69, 226, 0.4);
+}
+#add-friend-button:active {
+    transform: translateY(1px);
+}
+
+#add-friend-button:disabled {
+    background: #555;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.user-profile-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: #222;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+@media (max-width: 768px) {
+    .avatar-section {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+    }
+    
+    .avatar-image {
+        width: 120px;
+        height: 120px;
+    }
+    
+    #add-friend-button {
+        width: 100%;
+        padding: 10px;
+    }
+}
+
+
+
+
+
+
+
+
+
+.avatar-image {
+    transition: all 0.3s ease;
+}
+
+.avatar-image:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 25px rgba(110, 69, 226, 0.5);
+}
+
+/* Эффект при наведении на кнопку */
+#add-friend-button:hover {
+    background: linear-gradient(135deg, #5a35cc 0%, #6fc4c0 100%);
+}
+
+/* Эффект для кнопки, когда пользователь уже в друзьях */
+#add-friend-button.added {
+    background: #4CAF50;
+    animation: pulse 0.5s;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+.notification {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 15px 25px;
+    border-radius: 5px;
+    color: white;
+    z-index: 1000;
+    opacity: 1;
+    transition: opacity 0.5s;
+}
+
+.notification.success {
+    background-color: #4CAF50;
+}
+
+.notification.error {
+    background-color: #f44336;
+}
+
+.notification.fade-out {
+    opacity: 0;
+}
+.friend-action {
+    margin-left: 20px;
+}
+
+.friend-button {
+    background: linear-gradient(135deg, #6e45e2 0%, #89d4cf 100%);
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 30px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+}
+
+.friend-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.friend-button .icon {
+    font-size: 18px;
+}
+
+.friend-button .text {
+    white-space: nowrap;
+}
+/* Стили для сетки книг */
+#user-books-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.book-card-small {
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.book-card-small:hover {
+    transform: scale(1.03);
+}
+
+.book-cover-small {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    border-radius: 4px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.book-title-small {
+    margin-top: 8px;
+    font-size: 14px;
+    text-align: center;
+    word-break: break-word;
+}
+
+.error-message {
+    color: #d32f2f;
+    padding: 15px;
+    text-align: center;
+}
+#upload-form {
+    max-width: 600px;
+    margin: 10px auto;
+    padding: 25px;
+    background-color: #222;
+    border-radius: 15px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+#upload-form h2 {
+    text-align: center;
+    color: #6e45e2;
+    margin-bottom: 25px;
+    font-size: 28px;
+    position: relative;
+    padding-bottom: 10px;
+}
+
+#upload-form h2::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100px;
+    height: 3px;
+    background: linear-gradient(135deg, #6e45e2 0%, #89d4cf 100%);
+    border-radius: 3px;
+}
+
+#upload-form input,
+#upload-form textarea {
+    width: 95%;
+    padding: 12px 15px;
+    margin-bottom: 15px;
+    border: none;
+    border-radius: 8px;
+    background-color: #333;
+    color: #fff;
+    font-size: 16px;
+    transition: all 0.3s ease;
+}
+
+#upload-form input:focus,
+#upload-form textarea:focus {
+    outline: none;
+    background-color: #444;
+    box-shadow: 0 0 0 2px rgba(110, 69, 226, 0.5);
+}
+
+#upload-form textarea {
+    min-height: 120px;
+    resize: vertical;
+    resize: none;
+}
+
+#upload-form button[type="submit"] {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, #6e45e2 0%, #89d4cf 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 10px;
+}
+
+#upload-form button[type="submit"]:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(110, 69, 226, 0.4);
+}
+
+/* Стили для страницы книги (book.html) */
+#book-container {
+    max-width: 800px;
+    margin: 30px auto;
+    padding: 30px;
+    background-color: #222;
+    border-radius: 15px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    color: #fff;
+}
+
+.book-header {
+    display: flex;
+    gap: 30px;
+    margin-bottom: 30px;
+}
+
+.book-cover-large {
+    width: 250px;
+    height: 350px;
+    object-fit: cover;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    border: 3px solid #6e45e2;
+}
+
+.book-info {
+    flex: 1;
+}
+
+.book-title {
+    font-size: 28px;
+    margin-bottom: 10px;
+    color: #fff;
+}
+
+.book-author {
+    font-size: 18px;
+    color: #89d4cf;
+    margin-bottom: 15px;
+}
+
+.book-meta {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+    color: #aaa;
+}
+
+.book-description {
+    line-height: 1.6;
+    margin-bottom: 25px;
+}
+
+.book-actions {
+    display: flex;
+    gap: 15px;
+    margin-top: 25px;
+}
+.book-button {
+    padding: 12px 25px;
+    border: none;
+    border-radius: 30px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.book-button.primary {
+    background: linear-gradient(135deg, #6e45e2 0%, #89d4cf 100%);
+    color: white;
+}
+
+.book-button.secondary {
+    background-color: #444;
+    color: white;
+    border: 1px solid #6e45e2;
+}
+
+.book-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+.book-button:active {
+    transform: translateY(1px);
+}
+
+/* Адаптация для мобильных устройств */
+@media (max-width: 768px) {
+    .book-header {
+        flex-direction: column;
+    }
+    
+    .book-cover-large {
+        width: 100%;
+        height: auto;
+        max-height: 400px;
+        margin-bottom: 20px;
+    }
+    
+    #upload-form {
+        padding: 15px;
+        margin: 15px;
+    }
+}
+.book-button.danger {
+    background-color: #ff4444;
+    color: white;
+}
+
+.book-button.danger:hover {
+    background-color: #cc0000;
+}
+
+
+
+body > h2 {
+    text-align: center;
+    font-size: 32px;
+    margin: 30px 0;
+    color: #6e45e2;
+    position: relative;
+    padding-bottom: 15px;
+}
+body > h2::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100px;
+    height: 3px;
+    background: linear-gradient(135deg, #6e45e2 0%, #89d4cf 100%);
+    border-radius: 3px;
+}
+[data-theme="light"] body > h2 {
+    color: #6e45e2;
+}
+
+[data-theme="light"] body > h2::after {
+    background: linear-gradient(135deg, #6e45e2 0%, #89d4cf 100%);
+}
+.notification-link {
+    position: relative;
+    display: flex;
+    align-items: center;
+    margin-right: 15px;
+    color: white;
+    text-decoration: none;
+}
+
+.notification-icon {
+    font-size: 24px;
+}
+
+.notification-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background-color: #ff4444;
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    display: none;
+}
+.notification-menu-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.notification-counter {
+    background-color: #ff4444;
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    margin-left: auto;
+    display: none; /* По умолчанию скрыт */
+}
+/* Для мобильных устройств */
+@media (max-width: 768px) {
+    .notification-counter {
+        width: 18px;
+        height: 18px;
+        font-size: 10px;
+    }
+}
+.notifications-header {
+    text-align: center;
+    margin-bottom: 40px; /* Увеличиваем отступ снизу */
+}
+.notifications-title {
+    font-size: 32px;
+    color: #6e45e2;
+    left: 43%;
+    margin: 0;
+    position: relative;
+    display: inline-block;
+}
+
+.notifications-title::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 3px;
+    background: linear-gradient(135deg, #6e45e2 0%, #89d4cf 100%);
+    border-radius: 3px;
+}
+
+/* Адаптация для мобильных */
+@media (max-width: 768px) {
+    .notifications-title {
+        font-size: 28px;
+    }
+    
+    .notifications-title::after {
+        width: 60px;
+        bottom: -8px;
+    }
+}
+.notifications-page {
+    max-width: 800px;
+    margin: 30px auto;
+    padding: 20px;
+}
+
+.notifications-list {
+    width: 100%;
+    max-width: 700px;
+    background-color: #222;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    margin: 0 auto; /* Центрируем по горизонтали */
+}
+.notifications-content-wrapper {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px; /* Добавляем отступ сверху */
+}
+.notification-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.btn-accept, .btn-reject {
+    padding: 6px 12px;
+    font-size: 13px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-accept {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+}
+
+.btn-reject {
+    background-color: #f44336;
+    color: white;
+    border: none;
+}
+.btn-accept:hover, .btn-reject:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+.notification-item {
+    display: flex;
+    gap: 15px;
+    padding: 15px;
+    margin-bottom: 10px;
+    background-color: #333;
+    border-radius: 8px;
+    border-left: 4px solid #6e45e2;
+    transition: all 0.3s ease;
+}
+.notification-item.unread {
+    border-left-color: #89d4cf;
+    background-color: #3a3a3a;
+}
+.notification-cover {
+    width: 50px;
+    height: 70px;
+    object-fit: cover;
+    border-radius: 4px;
+}
+.notification-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.notification-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #aaa;
+}
+
+.new-badge {
+    background-color: #89d4cf;
+    color: #222;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: bold;
+}
+.notification-text {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.4;
+}
+.empty-notifications {
+    text-align: center;
+    padding: 30px;
+    color: #888;
+    font-size: 16px;
+}
+
+@media (max-width: 768px) {
+    .notification-item {
+        flex-direction: column;
+        gap: 10px;
+        padding: 12px;
+    }
+    
+    .notification-cover {
+        width: 100%;
+        height: auto;
+        max-height: 150px;
+    }
 }
