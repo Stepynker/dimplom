@@ -10,7 +10,7 @@ const PORT =  process.env.PORT || 5000;
 // Middleware
 app.use(bodyParser.json());
 app.use(cors({
-    origin: 'http://localhost:3000', // Укажите ваш фронтенд-адрес
+   origin: process.env.FRONTEND_URL || 'https://dimplom.onrender.com/', // Для продакшена укажите URL фронтенда
     credentials: true
 }));
 
