@@ -5,7 +5,7 @@ const connection = require('./db/connection');
 const mysql = require('mysql2');
 
 const app = express();
-const PORT = 5000;
+const PORT =  process.env.PORT || 5000;
 
 // Middleware
 app.use(bodyParser.json());
@@ -192,13 +192,28 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 
-// Endpoint для загрузки аватарки
-app.post('/api/upload-avatar', upload.single('avatar'), (req, res) => {
-    if (!req.file) {
-        return res.status(400).json({ error: 'Файл не загружен' });
-    }
-    const avatarUrl = `/images/avatars/${req.file.filename}`;
-    res.json({ avatarUrl });
+app.post('/api/upload-avatar', (req, res) => {
+    uploadAvatar(req, res, (err) => {
+        if (err) {
+            console.error('Ошибка загрузки аватарки:', err);
+            return res.status(400).json({ error: err.message });
+        }
+        
+        if (!req.file) {
+            return res.status(400).json({ error: 'Файл не был загружен' });
+        }
+
+        const avatarUrl = `/images/avatars/${req.file.filename}`;
+        console.log('Аватар успешно загружен:', avatarUrl);
+        
+        // Здесь можно обновить аватар пользователя в базе данных
+        // const userId = req.body.userId; // Нужно передать с клиента
+        
+        res.json({ 
+            success: true,
+            avatarUrl: avatarUrl
+        });
+    });
 });
 
 // Endpoint для загрузки обложки книги
@@ -208,4 +223,549 @@ app.post('/api/upload-cover', upload.single('cover'), (req, res) => {
     }
     const coverUrl = `/images/covers/${req.file.filename}`;
     res.json({ coverUrl });
+});
+
+// Поиск книг
+app.get('/api/search/books', (req, res) => {
+    const query = req.query.q;
+    if (!query || query.length < 2) {
+        return res.status(400).json({ error: 'Минимальная длина запроса - 2 символа' });
+    }
+
+    const searchQuery = `
+        SELECT * FROM books 
+        WHERE title LIKE ? OR author LIKE ?
+        LIMIT 10
+    `;
+    const searchValue = `%${query}%`;
+    
+    connection.query(searchQuery, [searchValue, searchValue], (err, results) => {
+        if (err) {
+            console.error('Ошибка поиска книг:', err);
+            return res.status(500).json({ error: 'Ошибка сервера' });
+        }
+        res.json(results);
+    });
+});
+
+// Поиск пользователей
+app.get('/api/search/users', (req, res) => {
+    const query = req.query.q;
+    if (!query || query.length < 2) {
+        return res.status(400).json({ error: 'Минимальная длина запроса - 2 символа' });
+    }
+
+    const searchQuery = `
+        SELECT id, login, avatar_url FROM users 
+        WHERE login LIKE ?
+        LIMIT 10
+    `;
+    const searchValue = `%${query}%`;
+    
+    connection.query(searchQuery, [searchValue], (err, results) => {
+        if (err) {
+            console.error('Ошибка поиска пользователей:', err);
+            return res.status(500).json({ error: 'Ошибка сервера' });
+        }
+        res.json(results);
+    });
+});
+app.get('/api/user/:id', (req, res) => {
+    const userId = req.params.id;
+    
+    const query = `
+        SELECT id, login, email, avatar_url, about_me as aboutMe, created_at 
+        FROM users 
+        WHERE id = ?
+    `;
+    
+    connection.query(query, [userId], (err, results) => {
+        if (err) {
+            console.error('Ошибка получения пользователя:', err);
+            return res.status(500).json({ error: 'Ошибка сервера' });
+        }
+        
+        if (results.length === 0) {
+            return res.status(404).json({ error: 'Пользователь не найден' });
+        }
+        
+        const user = results[0];
+        // Добавляем полный URL к аватару, если он есть
+        if (user.avatar_url && !user.avatar_url.startsWith('http')) {
+            user.avatar_url = `http://localhost:5000${user.avatar_url}`;
+        }
+        
+        res.json(user);
+    });
+});
+// Добавление в друзья
+app.post('/api/friends', (req, res) => {
+    const { followerId, followingId } = req.body;
+    
+    if (followerId === followingId) {
+        return res.status(400).json({ error: 'Нельзя добавить самого себя в друзья' });
+    }
+    
+    // Проверяем, не добавлен ли уже пользователь в друзья
+    const checkQuery = 'SELECT * FROM followers WHERE follower_id = ? AND following_id = ?';
+    connection.query(checkQuery, [followerId, followingId], (err, results) => {
+        if (err) {
+            console.error('Ошибка проверки друзей:', err);
+            return res.status(500).json({ error: 'Ошибка сервера' });
+        }
+        
+        if (results.length > 0) {
+            return res.status(400).json({ error: 'Этот пользователь уже у вас в друзьях' });
+        }
+        
+        // Добавляем в друзья
+        const insertQuery = 'INSERT INTO followers (follower_id, following_id) VALUES (?, ?)';
+        connection.query(insertQuery, [followerId, followingId], (err, results) => {
+            if (err) {
+                console.error('Ошибка добавления в друзья:', err);
+                return res.status(500).json({ error: 'Ошибка сервера' });
+            }
+            
+            // Создаем уведомление
+            const notificationQuery = 'INSERT INTO notifications (user_id, type, source_id) VALUES (?, "follow", ?)';
+            connection.query(notificationQuery, [followingId, followerId], (err) => {
+                if (err) console.error('Ошибка создания уведомления:', err);
+            });
+            
+            res.json({ message: 'Пользователь добавлен в друзья' });
+        });
+    });
+});
+
+app.get('/api/friends/check', (req, res) => {
+    const { followerId, followingId } = req.query;
+    
+    const query = 'SELECT 1 FROM followers WHERE follower_id = ? AND following_id = ? LIMIT 1';
+    connection.query(query, [followerId, followingId], (err, results) => {
+        if (err) {
+            console.error('Ошибка проверки друзей:', err);
+            return res.status(500).json({ error: 'Ошибка сервера' });
+        }
+        
+        res.json(results.length > 0);
+    });
+});
+
+app.post('/api/books/upload', (req, res) => {
+    const { title, author, description, cover_url, publication_year, user_id } = req.body;
+
+    if (!title || !author || !user_id) {
+        return res.status(400).json({ error: 'Обязательные поля: title, author, user_id' });
+    }
+
+    const insertBookQuery = `
+        INSERT INTO books (title, author, description, cover_url, publication_year)
+        VALUES (?, ?, ?, ?, ?)
+    `;
+
+    connection.query(insertBookQuery, [title, author, description, cover_url, publication_year], (err, bookResult) => {
+        if (err) {
+            console.error('Ошибка при добавлении книги:', err);
+            return res.status(500).json({ error: 'Ошибка сервера' });
+        }
+
+        const bookId = bookResult.insertId;
+
+        const insertOwnerQuery = `
+            INSERT INTO book_owners (user_id, book_id, is_available)
+            VALUES (?, ?, true)
+        `;
+        connection.query(insertOwnerQuery, [user_id, bookId], (err) => {
+            if (err) {
+                console.error('Ошибка при добавлении владельца:', err);
+                return res.status(500).json({ error: 'Ошибка сервера' });
+            }
+
+            res.status(201).json({ message: 'Книга успешно добавлена!', bookId });
+        });
+    });
+});
+app.get('/api/books/:id', (req, res) => {
+    const bookId = req.params.id;
+    
+    const query = `
+        SELECT b.*, bo.user_id as owner_id 
+        FROM books b
+        LEFT JOIN book_owners bo ON b.id = bo.book_id
+        WHERE b.id = ?
+        LIMIT 1
+    `;
+    
+    connection.query(query, [bookId], (err, results) => {
+        if (err || results.length === 0) {
+            return res.status(404).json({ error: 'Книга не найдена' });
+        }
+        
+        const book = results[0];
+        // Добавляем полный URL к обложке, если она есть
+        if (book.cover_url && !book.cover_url.startsWith('http')) {
+            book.cover_url = `http://localhost:5000${book.cover_url}`;
+        }
+        
+        res.json(book);
+    });
+});
+
+// Получение владельцев книги
+app.get('/api/book-owners/:bookId', (req, res) => {
+    const query = 'SELECT user_id, is_available FROM book_owners WHERE book_id = ? AND is_available = true';
+    connection.query(query, [req.params.bookId], (err, results) => {
+        if (err) return res.status(500).json({ error: 'Ошибка получения владельцев' });
+        res.json(results);
+    });
+});
+
+
+app.get('/api/user-books/:userId', (req, res) => {
+    const userId = req.params.userId;
+    
+    const query = `
+        SELECT b.* FROM books b
+        JOIN book_owners bo ON b.id = bo.book_id
+        WHERE bo.user_id = ?
+    `;
+    
+    connection.query(query, [userId], (err, results) => {
+        if (err) {
+            console.error('Ошибка получения книг пользователя:', err);
+            return res.status(500).json({ error: 'Ошибка сервера' });
+        }
+        res.json(results);
+    });
+});
+app.get('/api/notifications/:userId', (req, res) => {
+    const userId = req.params.userId;
+    
+    const query = `
+        SELECT 
+            n.*, 
+            u.login as sender_login,
+            b.title as book_title,
+            b.cover_url,
+            er.id as exchange_request_id,
+            er.status as exchange_status
+        FROM notifications n
+        LEFT JOIN users u ON n.source_id = u.id
+        LEFT JOIN books b ON n.book_id = b.id
+        LEFT JOIN exchange_requests er ON n.exchange_request_id = er.id
+        WHERE n.user_id = ?
+        ORDER BY n.created_at DESC
+    `;
+    
+    connection.query(query, [userId], (err, results) => {
+        if (err) {
+            console.error('Ошибка получения уведомлений:', err);
+            return res.status(500).json({ error: 'Ошибка сервера' });
+        }
+        
+        results.forEach(notif => {
+            if (notif.cover_url && !notif.cover_url.startsWith('http')) {
+                notif.cover_url = `http://localhost:5000${notif.cover_url}`;
+            }
+        });
+        
+        res.json(results);
+    });
+});
+
+// Пометка уведомления как прочитанного
+app.put('/api/notifications/:id/read', (req, res) => {
+    const query = 'UPDATE notifications SET is_read = true WHERE id = ?';
+    connection.query(query, [req.params.id], (err) => {
+        if (err) {
+            console.error('Ошибка обновления уведомления:', err);
+            return res.status(500).json({ error: 'Ошибка сервера' });
+        }
+        res.json({ success: true });
+    });
+});
+app.post('/api/exchange-request', async (req, res) => {
+    try {
+        const { requesterId, ownerId, bookId, message } = req.body;
+
+        // Проверяем существование книги
+        const [bookCheck] = await connection.promise().query(
+            'SELECT title FROM books WHERE id = ?', 
+            [bookId]
+        );
+        
+        if (bookCheck.length === 0) {
+            return res.status(404).json({ error: 'Книга не найдена' });
+        }
+
+        // Проверяем, что пользователь не отправляет запрос сам себе
+        if (requesterId === ownerId) {
+            return res.status(400).json({ error: 'Нельзя отправить запрос самому себе' });
+        }
+
+        // Проверяем, что владелец действительно владеет книгой
+        const [ownerCheck] = await connection.promise().query(
+            'SELECT 1 FROM book_owners WHERE user_id = ? AND book_id = ?',
+            [ownerId, bookId]
+        );
+        
+        if (ownerCheck.length === 0) {
+            return res.status(400).json({ error: 'Указанный пользователь не владеет этой книгой' });
+        }
+
+        // Создаем запрос на обмен
+        const [exchangeResult] = await connection.promise().query(
+            `INSERT INTO exchange_requests 
+            (requester_id, owner_id, book_id, message, status) 
+            VALUES (?, ?, ?, ?, 'pending')`,
+            [requesterId, ownerId, bookId, message]
+        );
+
+        // Создаем уведомление для владельца с привязкой к запросу
+        await connection.promise().query(
+            `INSERT INTO notifications 
+            (user_id, source_id, book_id, exchange_request_id, type, message, is_read) 
+            VALUES (?, ?, ?, ?, 'exchange_request', ?, false)`,
+            [ownerId, requesterId, bookId, exchangeResult.insertId, 
+             `Новый запрос на обмен: ${bookCheck[0].title}`]
+        );
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Ошибка создания запроса обмена:', error);
+        res.status(500).json({ 
+            error: 'Внутренняя ошибка сервера',
+            details: error.message 
+        });
+    }
+});
+app.post('/api/exchange/accept', async (req, res) => {
+    try {
+        const { requestId, userId, notificationId } = req.body;
+
+        // 1. Проверяем существование запроса
+        const [request] = await connection.promise().query(
+            'SELECT * FROM exchange_requests WHERE id = ? AND status = "pending"',
+            [requestId]
+        );
+        
+        if (request.length === 0) {
+            // Помечаем уведомление как неактуальное
+            if (notificationId) {
+                await connection.promise().query(
+                    'UPDATE notifications SET is_read = true WHERE id = ?',
+                    [notificationId]
+                );
+            }
+            return res.status(404).json({ error: 'Запрос не найден или уже обработан' });
+        }
+
+        const exchangeRequest = request[0];
+
+        // 2. Проверяем права пользователя
+        if (exchangeRequest.owner_id !== userId) {
+            return res.status(403).json({ error: 'Нет прав для выполнения этого действия' });
+        }
+
+        // 3. Обновляем статус запроса
+        await connection.promise().query(
+            'UPDATE exchange_requests SET status = "accepted" WHERE id = ?',
+            [requestId]
+        );
+
+        // 4. Обновляем владельца книги
+        await transferBookOwnership(exchangeRequest.book_id, exchangeRequest.requester_id, exchangeRequest.owner_id);
+
+        // 5. Создаем уведомление для инициатора
+        const [book] = await connection.promise().query(
+            'SELECT title FROM books WHERE id = ?',
+            [exchangeRequest.book_id]
+        );
+
+        await connection.promise().query(
+            `INSERT INTO notifications 
+            (user_id, source_id, book_id, type, message, is_read) 
+            VALUES (?, ?, ?, 'exchange_accepted', ?, false)`,
+            [
+                exchangeRequest.requester_id,
+                userId,
+                exchangeRequest.book_id,
+                `Ваш запрос на обмен книги "${book[0].title}" принят`
+            ]
+        );
+
+        // 6. Помечаем исходное уведомление как прочитанное
+        if (notificationId) {
+               await connection.promise().query(
+    'DELETE FROM notifications WHERE id = ?',
+    [notificationId]
+);
+        }
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Ошибка принятия запроса:', error);
+        res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
+});
+
+
+// Функция для передачи прав на книгу
+async function transferBookOwnership(bookId, newOwnerId, previousOwnerId) {
+    // 1. Удаляем старого владельца
+    await connection.promise().query(
+        'DELETE FROM book_owners WHERE book_id = ? AND user_id = ?',
+        [bookId, previousOwnerId]
+    );
+    
+    // 2. Добавляем нового владельца
+    await connection.promise().query(
+        'INSERT INTO book_owners (user_id, book_id, is_available) VALUES (?, ?, true)',
+        [newOwnerId, bookId]
+    );
+    
+    // 3. Добавляем запись в историю обменов
+    await connection.promise().query(
+        `INSERT INTO exchange_history 
+        (book_id, previous_owner_id, new_owner_id, exchange_date) 
+        VALUES (?, ?, ?, NOW())`,
+        [bookId, previousOwnerId, newOwnerId]
+    );
+}
+app.get('/api/exchange-history/:userId', async (req, res) => {
+    try {
+        const userId = req.params.userId;
+        
+        const query = `
+            SELECT eh.*, b.title as book_title, b.cover_url,
+                   pu.login as previous_owner_login,
+                   nu.login as new_owner_login
+            FROM exchange_history eh
+            JOIN books b ON eh.book_id = b.id
+            JOIN users pu ON eh.previous_owner_id = pu.id
+            JOIN users nu ON eh.new_owner_id = nu.id
+            WHERE eh.previous_owner_id = ? OR eh.new_owner_id = ?
+            ORDER BY eh.exchange_date DESC
+        `;
+        
+        const [results] = await connection.promise().query(query, [userId, userId]);
+        res.json(results);
+    } catch (error) {
+        console.error('Ошибка получения истории обменов:', error);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
+});
+app.get('/api/notifications/single/:id', (req, res) => {
+    const query = `
+        SELECT n.*, er.id as exchange_request_id
+        FROM notifications n
+        LEFT JOIN exchange_requests er ON n.exchange_request_id = er.id
+        WHERE n.id = ?
+    `;
+    
+    connection.query(query, [req.params.id], (err, results) => {
+        if (err) {
+            console.error('Ошибка получения уведомления:', err);
+            return res.status(500).json({ error: 'Ошибка сервера' });
+        }
+        
+        if (results.length === 0) {
+            return res.status(404).json({ error: 'Уведомление не найдено' });
+        }
+        
+        res.json(results[0]);
+    });
+});
+app.get('/api/notifications/:id/full', (req, res) => {
+    const query = `
+        SELECT 
+            n.*, 
+            er.id as exchange_request_id,
+            er.status as exchange_status,
+            er.requester_id,
+            er.owner_id,
+            er.book_id
+        FROM notifications n
+        LEFT JOIN exchange_requests er ON n.exchange_request_id = er.id
+        WHERE n.id = ?
+    `;
+    
+    connection.query(query, [req.params.id], (err, results) => {
+        if (err) {
+            console.error('Ошибка получения уведомления:', err);
+            return res.status(500).json({ error: 'Ошибка сервера' });
+        }
+        
+        if (results.length === 0) {
+            return res.status(404).json({ error: 'Уведомление не найдено' });
+        }
+        
+        res.json(results[0]);
+    });
+});
+app.post('/api/exchange/reject', async (req, res) => {
+    try {
+        const { requestId, userId, notificationId } = req.body;
+
+        // 1. Проверяем существование запроса
+        const [request] = await connection.promise().query(
+            'SELECT * FROM exchange_requests WHERE id = ? AND status = "pending"',
+            [requestId]
+        );
+        
+        if (request.length === 0) {
+            // Помечаем уведомление как прочитанное
+            if (notificationId) {
+                await connection.promise().query(
+                    'UPDATE notifications SET is_read = true WHERE id = ?',
+                    [notificationId]
+                );
+            }
+            return res.status(404).json({ error: 'Запрос не найден или уже обработан' });
+        }
+
+        const exchangeRequest = request[0];
+
+        // 2. Проверяем права пользователя
+        if (exchangeRequest.owner_id !== userId) {
+            return res.status(403).json({ error: 'Нет прав для выполнения этого действия' });
+        }
+
+        // 3. Обновляем статус запроса
+        await connection.promise().query(
+            'UPDATE exchange_requests SET status = "rejected" WHERE id = ?',
+            [requestId]
+        );
+
+        // 4. Создаем уведомление для инициатора
+        const [book] = await connection.promise().query(
+            'SELECT title FROM books WHERE id = ?',
+            [exchangeRequest.book_id]
+        );
+
+        await connection.promise().query(
+            `INSERT INTO notifications 
+            (user_id, source_id, book_id, type, message, is_read) 
+            VALUES (?, ?, ?, 'exchange_rejected', ?, false)`,
+            [
+                exchangeRequest.requester_id,
+                userId,
+                exchangeRequest.book_id,
+                `Ваш запрос на обмен книги "${book[0].title}" отклонен`
+            ]
+        );
+
+        // 5. Удаляем исходное уведомление
+        if (notificationId) {
+            await connection.promise().query(
+                'DELETE FROM notifications WHERE id = ?',
+                [notificationId]
+            );
+        }
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Ошибка отклонения запроса:', error);
+        res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
 });
