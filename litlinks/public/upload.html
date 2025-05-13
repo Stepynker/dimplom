@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LitLinks</title>
+    <link rel="stylesheet" href="Cssik.css">
+    <title>Добавить книгу</title>
+</head>
+    <header>
+        <div class="logo">
+            <a href="index.html" class="site-title">
+                <svg class="logo-icon" viewBox="0 0 24 24">
+                    <path d="M12 2L2 7v10l10 5 10-5V7L12 2z"/>
+                </svg>
+                <span class="site-name">LitLinks</span>
+            </a>
+        </div>
+        <div class="modal" id="search-modal">
+            <div class="modal-content search-modal-content">
+                <button class="close-modal" id="close-search">×</button>
+                <div class="search-bar-modal">
+                    <input type="text" id="search-input-modal" placeholder="Поиск книг, авторов, пользователей...">
+                        
+                    </button>
+                </div>
+        
+                <div class="search-tabs">
+                    <button class="search-tab active" data-tab="books">Книги</button>
+                    <button class="search-tab" data-tab="users">Пользователи</button>
+                </div>
+        
+                <div class="search-results">
+                    <div class="search-tab-content active" id="books-results">
+                        <!-- Здесь будут результаты поиска по книгам -->
+                        <div class="empty-results">Введите запрос для поиска книг</div>
+                    </div>
+        
+                    <div class="search-tab-content" id="users-results">
+                        <!-- Здесь будут результаты поиска по пользователям -->
+                        <div class="empty-results">Введите запрос для поиска пользователей</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="search-bar">
+            <button id="search-button" class="search-button">
+                <span class="search-icon">🔍</span>
+                <span class="search-text">Поиск</span>
+            </button>
+        </div>
+        
+        <div>
+            <button id="theme-toggle" class="theme-toggle">
+            </button>
+        </div>
+            <div class="menu-icon" id="menu-icon">☰</div>
+        </div>
+        <nav class="sidebar" id="sidebar">
+            <button class="close-menu" id="close-menu">×</button>
+            <ul>
+                <!-- Кнопки для неавторизованных пользователей -->
+                <li id="authLink">
+                    <a href="#" id="open-login">Войти</a> / <a href="#" id="open-register">Регистрация</a>
+                </li>
+                <!-- Кнопки для авторизованных пользователей -->
+                <li id="profile-link"><a href="profile.html" class="profile-button">👤 Профиль</a></li>
+                <li id="bookmarks-link"><a href="bookmarks.html">📚 Закладки</a></li>
+   <li id="notifications-link"><a href="notifications.html" class="notification-menu-item"> 🔔 Уведомления <span class="notification-counter"></span></a> </li>
+                <!-- Кнопка выхода -->
+                <li><button class="logout-icon" id="logout-icon">⎘ Выйти</button></li>
+            </ul>
+        </nav>
+    </header>
+
+<body>
+    <h2>Загрузить книгу</h2>
+    <form id="upload-form">
+        <input type="text" id="title" placeholder="Название" required><br>
+        <input type="text" id="author" placeholder="Автор" required><br>
+        <textarea id="description" placeholder="Описание"></textarea><br>
+        <input type="text" id="cover_url" placeholder="URL обложки"><br>
+        <input type="number" id="year" placeholder="Год публикации"><br>
+        <button type="submit">Добавить книгу</button>
+    </form>
+<script src="/nightLight.js"></script>
+<script src="/Javik.js"></script>
+<script src="avatar.js"></script>
+<script src="Poisk.js"></script>
+<script src="upload.js"></script>
+</body>
+</html>
