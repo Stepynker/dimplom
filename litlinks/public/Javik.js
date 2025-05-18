@@ -110,7 +110,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 async function loadUserProfile(userId) {
     try {
-        const response = await fetch(`http://localhost:5000/api/user/${userId}`);
+        const response = await fetch(`http://5.129.203.13:5001/api/user/${userId}`);
         if (!response.ok) {
             throw new Error('Пользователь не найден');
         }
@@ -153,7 +153,7 @@ window.loadUserBooks = async function(userId) {
     if (!grid) return;
 
     try {
-        const response = await fetch(`http://localhost:5000/api/user-books/${userId}`);
+        const response = await fetch(`http://5.129.203.13:5001/api/user-books/${userId}`);
         const books = await response.json();
         
         grid.innerHTML = books.map(book => `
@@ -186,7 +186,7 @@ async function loadUserBooks(userId) {
     try {
         grid.innerHTML = '<p>Загрузка книг...</p>';
         
-        const response = await fetch(`http://localhost:5000/api/user-books/${userId}`);
+        const response = await fetch(`http://5.129.203.13:5001/api/user-books/${userId}`);
         if (!response.ok) throw new Error(`HTTP error! ${response.status}`);
         
         const books = await response.json();
@@ -299,7 +299,7 @@ if (openLogin && openRegister && closeLogin && closeRegister) {
             }
 
             try {
-                const response = await fetch('http://localhost:5000/api/register', {
+                const response = await fetch('http://5.129.203.13:5001/api/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ login, email, password }),
@@ -327,7 +327,7 @@ if (openLogin && openRegister && closeLogin && closeRegister) {
             const password = document.getElementById('login-password').value;
 
             try {
-                const response = await fetch('http://localhost:5000/api/login', {
+                const response = await fetch('http://5.129.203.13:5001/api/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ login, password }),
@@ -409,7 +409,7 @@ document.addEventListener('DOMContentLoaded', loadRecommendations);
 async function loadRecommendations() {
     try {
         console.log('Загрузка книг...');
-        const response = await fetch('http://localhost:5000/api/books');
+        const response = await fetch('http://5.129.203.13:5001/api/books');
         const books = await response.json();
         console.log('Загруженные книги:', books);
 
@@ -482,7 +482,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 async function fetchUserBookmarks(userId) {
     try {
-        const response = await fetch(`http://localhost:5000/api/bookmarks/${userId}`);
+        const response = await fetch(`http://5.129.203.13:5001/api/bookmarks/${userId}`);
         const bookmarks = await response.json();
         return bookmarks;
     } catch (error) {
@@ -497,8 +497,10 @@ function filterBookmarksByGenre() {
     const bookmarkCards = bookmarksGrid.querySelectorAll('.bookmark-card');
 
     bookmarkCards.forEach(card => {
-        const cardGenre = card.dataset.genre;
-        if (selectedGenre === 'all' || cardGenre === selectedGenre) {
+        const cardGenres = card.dataset.genre; // Это строка с жанрами через запятую
+        const genresArray = cardGenres ? cardGenres.split(',') : [];
+        
+        if (selectedGenre === 'all' || genresArray.includes(selectedGenre)) {
             card.style.display = 'block';
         } else {
             card.style.display = 'none';
@@ -515,7 +517,7 @@ async function removeFromBookmarks(bookId) {
     }
 
     try {
-        fetch(`http://localhost:5000/api/bookmarks/${bookmarkId}`, {
+        fetch(`http://5.129.203.13:5001/api/bookmarks/${bookmarkId}`, {
             method: 'DELETE',
         });
         const data = await response.json();
@@ -534,7 +536,7 @@ async function addToBookmarks(bookId) {
     }
 
     try {
-        const response = await fetch('http://localhost:5000/api/bookmarks', {
+        const response = await fetch('http://5.129.203.13:5001/api/bookmarks', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: user.id, bookId }), // Убедитесь, что userId и bookId передаются
@@ -601,7 +603,7 @@ async function loadBookmarks() {
     }
 
     try {
-        const response = await fetch(`http://localhost:5000/api/bookmarks/${user.id}`);
+        const response = await fetch(`http://5.129.203.13:5001/api/bookmarks/${user.id}`);
         const bookmarks = await response.json();
         console.log('📖 Полученные закладки:', bookmarks);
 
@@ -613,7 +615,8 @@ async function loadBookmarks() {
             // Создаём карточку для закладки
             const bookmarkCard = document.createElement('div');
             bookmarkCard.classList.add('bookmark-card');
-            bookmarkCard.dataset.genre = bookmark.genre; // Добавляем жанр книги в data-атрибут
+            // Сохраняем жанры в data-атрибут (может быть строка с несколькими жанрами через запятую)
+            bookmarkCard.dataset.genre = bookmark.genres || '';
 
             // Обложка книги
             const bookCover = document.createElement('img');
@@ -632,7 +635,7 @@ async function loadBookmarks() {
             const removeButton = document.createElement('button');
             removeButton.textContent = '❌ Удалить';
             removeButton.classList.add('remove-button');
-            removeButton.addEventListener('click', () => removeFromBookmarks(bookmark.id)); // Передаем bookmark.id, а не book.id
+            removeButton.addEventListener('click', () => removeFromBookmarks(bookmark.id));
 
             // Собираем элементы в карточку
             bookmarkCard.appendChild(bookCover);
@@ -659,7 +662,7 @@ async function removeFromBookmarks(bookId) {
     }
 
     try {
-        const response = await fetch('http://localhost:5000/api/bookmarks', {
+        const response = await fetch('http://5.129.203.13:5001/api/bookmarks', {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: user.id, bookId }), // Передаем userId и bookId
@@ -804,7 +807,7 @@ function showNotification(message, type) {
 
 async function loadUserBooks(userId) {
     try {
-        const response = await fetch(`http://localhost:5000/api/user-books/${userId}`);
+        const response = await fetch(`http://5.129.203.13:5001/api/user-books/${userId}`);
         const books = await response.json();
         
         const booksGrid = document.getElementById('user-books-grid');
@@ -862,7 +865,7 @@ function emergencyLoadBooks() {
     const user = JSON.parse(localStorage.getItem('user'));
     if (!user) return;
     
-    fetch(`http://localhost:5000/api/user-books/${user.id}`)
+    fetch(`http://5.129.203.13:5001/api/user-books/${user.id}`)
         .then(r => r.json())
         .then(books => {
             const grid = document.getElementById('user-books-grid');
@@ -882,7 +885,7 @@ function requestExchange(bookId) {
         return;
     }
 
-    fetch('http://localhost:5000/api/exchange-request', {
+    fetch('http://5.129.203.13:5001/api/exchange-request', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

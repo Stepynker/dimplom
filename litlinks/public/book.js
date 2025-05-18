@@ -27,14 +27,14 @@ document.addEventListener('DOMContentLoaded', function() {
 async function loadBook(bookId, userId) {
     try {
         // Получаем данные книги
-        const bookResponse = await fetch(`http://localhost:5000/api/books/${bookId}`);
+        const bookResponse = await fetch(`http://5.129.203.13:5001/api/books/${bookId}`);
         if (!bookResponse.ok) {
             throw new Error('Книга не найдена');
         }
         const book = await bookResponse.json();
 
         // Получаем владельцев книги
-        const ownersResponse = await fetch(`http://localhost:5000/api/book-owners/${bookId}`);
+        const ownersResponse = await fetch(`http://5.129.203.13:5001/api/book-owners/${bookId}`);
         if (!ownersResponse.ok) {
             throw new Error('Не удалось загрузить владельцев');
         }
@@ -105,7 +105,7 @@ async function requestExchange(bookId) {
 
     try {
         // 1. Получаем владельца книги
-        const ownerResponse = await fetch(`http://localhost:5000/api/book-owners/${bookId}`);
+        const ownerResponse = await fetch(`http://5.129.203.13:5001/api/book-owners/${bookId}`);
         const owners = await ownerResponse.json();
         
         if (!owners || owners.length === 0) {
@@ -127,7 +127,7 @@ async function requestExchange(bookId) {
         }
 
         // 2. Отправляем запрос на обмен
-        const response = await fetch('http://localhost:5000/api/exchange-request', {
+        const response = await fetch('http://5.129.203.13:5001/api/exchange-request', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -159,7 +159,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (bookId) {
         // Загружаем данные книги с сервера
-        fetch(`http://localhost:5000/api/books/${bookId}`)
+        fetch(`http://5.129.203.13:5001/api/books/${bookId}`)
             .then(response => response.json())
             .then(book => {
                 renderBook(book);
@@ -244,7 +244,7 @@ function showNotification(message, type) {
 async function acceptExchange(requestId) {
     try {
         const user = JSON.parse(localStorage.getItem('user'));
-        const response = await fetch('http://localhost:5000/api/exchange/accept', {
+        const response = await fetch('http://5.129.203.13:5001/api/exchange/accept', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -273,7 +273,7 @@ async function acceptExchange(requestId) {
 async function rejectExchange(requestId) {
     try {
         const user = JSON.parse(localStorage.getItem('user'));
-        const response = await fetch('http://localhost:5000/api/exchange/reject', {
+        const response = await fetch('http://5.129.203.13:5001/api/exchange/reject', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -323,4 +323,44 @@ function renderNotification(notif) {
     `;
     
     return notificationElement;
+}
+async function removeBook(bookId) {
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user) {
+        showNotification('Для удаления книги необходимо войти в систему', 'error');
+        return;
+    }
+
+    if (!confirm('Вы уверены, что хотите удалить эту книгу?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch('http://5.129.203.13:5001/api/books', {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                user_id: user.id,
+                book_id: bookId
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || 'Не удалось удалить книгу');
+        }
+
+        showNotification('Книга успешно удалена!', 'success');
+        
+        // Перенаправляем на профиль через 1.5 секунды
+        setTimeout(() => {
+            window.location.href = 'profile.html';
+        }, 1500);
+
+    } catch (error) {
+        console.error('Ошибка удаления книги:', error);
+        showNotification(error.message || 'Произошла ошибка при удалении книги', 'error');
+    }
 }

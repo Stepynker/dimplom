@@ -60,63 +60,65 @@ if (avatarInputModal) {
 }
 
 // Замените обработчик uploadAvatarBtn на этот:
+// Удаляем старый обработчик и оставляем только этот (строки 90-127 заменяем на этот вариант)
 if (uploadAvatarBtn) {
     uploadAvatarBtn.addEventListener('click', async function() {
         const file = avatarInputModal.files[0];
         if (!file) {
-            alert('Пожалуйста, выберите файл');
+            showNotification('Пожалуйста, выберите файл', 'error');
+            return;
+        }
+
+        // Проверка типа файла
+        const validTypes = ['image/jpeg', 'image/png', 'image/gif'];
+        if (!validTypes.includes(file.type)) {
+            showNotification('Разрешены только JPG, PNG и GIF изображения', 'error');
             return;
         }
 
         // Проверка размера файла (5MB максимум)
         if (file.size > 5 * 1024 * 1024) {
-            alert('Файл слишком большой. Максимальный размер: 5MB');
+            showNotification('Файл слишком большой. Максимальный размер: 5MB', 'error');
             return;
         }
 
-        const formData = new FormData();
-        formData.append('avatar', file);
-        
-        // Добавляем ID пользователя
- window.currentUser = JSON.parse(localStorage.getItem('user'));
-        if (user) {
-            formData.append('userId', user.id);
+        // Получаем данные пользователя
+        const user = JSON.parse(localStorage.getItem('user'));
+        if (!user || !user.id) {
+            showNotification('Необходимо авторизоваться', 'error');
+            return;
         }
 
         try {
             uploadAvatarBtn.disabled = true;
             uploadAvatarBtn.textContent = 'Загрузка...';
-            
-            const response = await fetch('http://localhost:5000/api/upload-avatar', {
+
+            const formData = new FormData();
+            formData.append('avatar', file);
+            formData.append('userId', user.id);
+
+            const response = await fetch('http://5.129.203.13:5001/api/upload-avatar', {
                 method: 'POST',
-                body: formData,
-                // Не устанавливайте заголовок Content-Type - браузер сделает это автоматически с boundary
+                body: formData
             });
 
             const data = await response.json();
-            
-            if (!response.ok) {
-                throw new Error(data.error || 'Ошибка загрузки аватарки');
+
+            if (!response.ok || !data.success) {
+                throw new Error(data.error || 'Ошибка сервера');
             }
 
-            // Обновляем аватарку в профиле
+            // Обновляем аватар в интерфейсе и localStorage
             profileAvatar.src = data.avatarUrl;
+            user.avatarUrl = data.avatarUrl;
+            localStorage.setItem('user', JSON.stringify(user));
             
-            // Обновляем данные пользователя в localStorage
-            if (user) {
-                user.avatarUrl = data.avatarUrl;
-                localStorage.setItem('user', JSON.stringify(user));
-            }
-            
-            // Закрываем модальное окно
+            showNotification('Аватар успешно обновлен!', 'success');
             avatarModal.classList.remove('active');
             
-            // Показываем уведомление
-            showNotification('Аватар успешно обновлен!', 'success');
-            
         } catch (error) {
-            console.error('Ошибка:', error);
-            showNotification('Ошибка: ' + error.message, 'error');
+            console.error('Ошибка загрузки:', error);
+            showNotification(`Ошибка: ${error.message}`, 'error');
         } finally {
             uploadAvatarBtn.disabled = false;
             uploadAvatarBtn.textContent = 'Загрузить';
@@ -143,7 +145,7 @@ async function uploadAvatar(file, userId) {
     formData.append('userId', userId);
 
     try {
-        const response = await fetch('http://localhost:5000/api/upload-avatar', {
+        const response = await fetch('http://5.129.203.13:5001/api/upload-avatar', {
             method: 'POST',
             body: formData,
             // Не устанавливаем Content-Type вручную!
@@ -168,59 +170,6 @@ async function uploadAvatar(file, userId) {
         throw error;
     }
 }
-
-// Обработчик кнопки загрузки
-if (uploadAvatarBtn) {
-    uploadAvatarBtn.addEventListener('click', async function() {
-        const file = avatarInputModal.files[0];
-        if (!file) {
-            showNotification('Пожалуйста, выберите файл', 'error');
-            return;
-        }
-
-        // Проверка типа файла
-        const validTypes = ['image/jpeg', 'image/png', 'image/gif'];
-        if (!validTypes.includes(file.type)) {
-            showNotification('Разрешены только JPG, PNG и GIF изображения', 'error');
-            return;
-        }
-
-        // Проверка размера файла
-        if (file.size > 5 * 1024 * 1024) {
-            showNotification('Файл слишком большой (макс. 5MB)', 'error');
-            return;
-        }
-
-   window.currentUser = JSON.parse(localStorage.getItem('user'));
-        if (!user || !user.id) {
-            showNotification('Необходимо авторизоваться', 'error');
-            return;
-        }
-
-        try {
-            uploadAvatarBtn.disabled = true;
-            uploadAvatarBtn.textContent = 'Загрузка...';
-
-            const result = await uploadAvatar(file, user.id);
-            
-            // Обновляем интерфейс
-            profileAvatar.src = result.avatarUrl;
-            user.avatarUrl = result.avatarUrl;
-            localStorage.setItem('user', JSON.stringify(user));
-            
-            showNotification('Аватар успешно обновлен!', 'success');
-            avatarModal.classList.remove('active');
-            
-        } catch (error) {
-            console.error('Avatar upload failed:', error);
-            showNotification(`Ошибка: ${error.message}`, 'error');
-        } finally {
-            uploadAvatarBtn.disabled = false;
-            uploadAvatarBtn.textContent = 'Загрузить';
-        }
-    });
-}
-
 
 
 

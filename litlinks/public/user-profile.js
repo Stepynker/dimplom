@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 async function loadUserProfile(userId) {
     try {
-        const response = await fetch(`http://localhost:5000/api/user/${userId}`);
+        const response = await fetch(`http://5.129.203.13:5001/api/user/${userId}`);
         if (!response.ok) throw new Error('Пользователь не найден');
         
         const user = await response.json();
@@ -28,7 +28,7 @@ async function loadUserProfile(userId) {
         // Загружаем аватар
         const avatarImg = document.getElementById('user-avatar');
         const avatarUrl = user.avatar_url || '/images/default-avatar.png';
-        avatarImg.src = avatarUrl.startsWith('http') ? avatarUrl : `http://localhost:5000${avatarUrl}`;
+        avatarImg.src = avatarUrl.startsWith('http') ? avatarUrl : `http://5.129.203.13:5001${avatarUrl}`;
         
         // Заполняем данные
         document.getElementById('user-login').textContent = user.login;
@@ -42,7 +42,7 @@ async function loadUserProfile(userId) {
                 document.getElementById('add-friend-button').style.display = 'none';
             } else {
                 // Проверяем, есть ли уже этот пользователь в друзьях
-                const friendsResponse = await fetch(`http://localhost:5000/api/friends/check?followerId=${currentUser.id}&followingId=${userId}`);
+                const friendsResponse = await fetch(`http://5.129.203.13:5001/api/friends/check?followerId=${currentUser.id}&followingId=${userId}`);
                 if (friendsResponse.ok) {
                     const isFriend = await friendsResponse.json();
                     if (isFriend) {
@@ -72,7 +72,7 @@ async function addFriend(userId) {
     button.textContent = 'Добавление...';
     
     try {
-        const response = await fetch('http://localhost:5000/api/friends', {
+        const response = await fetch('http://5.129.203.13:5001/api/friends', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 

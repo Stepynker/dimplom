@@ -1,5 +1,4 @@
-document.addEventListener('DOMContentLoaded', function() {
-    // Проверяем авторизацию только если мы на странице upload.html
+document.addEventListener('DOMContentLoaded', async function() {
     if (window.location.pathname.endsWith('upload.html')) {
         const currentUser = JSON.parse(localStorage.getItem('user'));
         if (!currentUser) {
@@ -8,8 +7,17 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // Устанавливаем currentUser в глобальную область видимости
-        window.currentUser = currentUser;
+        // Загружаем список жанров
+        try {
+            const response = await fetch('http://5.129.203.13:5001/api/genres');
+            const genres = await response.json();
+            
+            const genreSelect = document.getElementById('genre');
+            genreSelect.innerHTML = '<option value="">Выберите жанр</option>' + 
+                genres.map(genre => `<option value="${genre.id}">${genre.name}</option>`).join('');
+        } catch (error) {
+            console.error('Ошибка загрузки жанров:', error);
+        }
 
         const uploadForm = document.getElementById('upload-form');
         if (uploadForm) {
@@ -22,11 +30,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     description: document.getElementById('description').value,
                     cover_url: document.getElementById('cover_url').value,
                     publication_year: document.getElementById('year').value,
+                    genre_id: document.getElementById('genre').value,
                     user_id: currentUser.id
                 };
 
                 try {
-                    const response = await fetch('http://localhost:5000/api/books/upload', {
+                    const response = await fetch('http://5.129.203.13:5001/api/books/upload', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(data)

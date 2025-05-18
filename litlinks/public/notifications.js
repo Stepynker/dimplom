@@ -12,7 +12,7 @@ function loadNotifications() {
         return;
     }
 
-    fetch(`http://localhost:5000/api/notifications/${user.id}`)
+    fetch(`http://5.129.203.13:5001/api/notifications/${user.id}`)
         .then(response => response.json())
         .then(notifications => {
             const container = document.getElementById('notifications-list');
@@ -95,7 +95,7 @@ function getNotificationText(notification) {
 }
 
 function markAsRead(notificationId) {
-    fetch(`http://localhost:5000/api/notifications/${notificationId}/read`, {
+    fetch(`http://5.129.203.13:5001/api/notifications/${notificationId}/read`, {
         method: 'PUT'
     })
     .then(response => response.json())
@@ -137,7 +137,7 @@ function updateNotificationCounter() {
     const user = JSON.parse(localStorage.getItem('user'));
     if (!user) return;
 
-    fetch(`http://localhost:5000/api/notifications/${user.id}/unread-count`)
+    fetch(`http://5.129.203.13:5001/api/notifications/${user.id}/unread-count`)
         .then(response => response.json())
         .then(data => {
             const counter = document.querySelector('.notification-counter');
@@ -171,7 +171,7 @@ async function acceptExchange(notificationId) {
         }
 
         // 1. Получаем полные данные уведомления
-        const notificationResponse = await fetch(`http://localhost:5000/api/notifications/${notificationId}/full`);
+        const notificationResponse = await fetch(`http://5.129.203.13:5001/api/notifications/${notificationId}/full`);
         const notification = await notificationResponse.json();
         
         if (!notification) {
@@ -184,7 +184,7 @@ async function acceptExchange(notificationId) {
         }
 
         // 2. Отправляем запрос на принятие обмена
-        const response = await fetch('http://localhost:5000/api/exchange/accept', {
+        const response = await fetch('http://5.129.203.13:5001/api/exchange/accept', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -225,7 +225,7 @@ async function rejectExchange(notificationId) {
         }
 
         // 1. Получаем полные данные уведомления
-        const notificationResponse = await fetch(`http://localhost:5000/api/notifications/${notificationId}/full`);
+        const notificationResponse = await fetch(`http://5.129.203.13:5001/api/notifications/${notificationId}/full`);
         const notification = await notificationResponse.json();
         
         if (!notification || !notification.exchange_request_id) {
@@ -233,7 +233,7 @@ async function rejectExchange(notificationId) {
         }
 
         // 2. Отправляем запрос на отклонение обмена
-        const response = await fetch('http://localhost:5000/api/exchange/reject', {
+        const response = await fetch('http://5.129.203.13:5001/api/exchange/reject', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

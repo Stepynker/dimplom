@@ -5,16 +5,32 @@ const connection = require('./db/connection');
 const mysql = require('mysql2');
 
 const app = express();
-const PORT =  process.env.PORT || 5000;
+const PORT =  process.env.PORT || 5001;
 
+const dbConfig = {
+  host: '127.0.0.1',
+  user: 'litlinks_user',       // Используйте нового пользователя
+  password: '123', // Пароль, который задали выше
+  database: 'litlinks',
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
+};
 // Middleware
 app.use(bodyParser.json());
 app.use(cors({
-   origin: process.env.FRONTEND_URL || 'https://dimplom.onrender.com/', // Для продакшена укажите URL фронтенда
-    credentials: true
+  origin: [
+    'http://5.129.203.13',
+    'http://localhost',
+    'http://localhost:3000',
+    'http://5.129.203.13:80',
+    'http://5.129.203.13:5001'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
-
-
+app.options('*', cors());
 // Раздача статических файлов
 app.use(express.static('../public'));
 
@@ -133,12 +149,15 @@ app.get('/api/bookmarks/:userId', (req, res) => {
     const userId = req.params.userId;
 
     const query = `
-        SELECT books.*, genres.name as genre 
+        SELECT books.*, GROUP_CONCAT(genres.name) as genres 
         FROM books 
         JOIN bookmarks ON books.id = bookmarks.book_id 
-        JOIN genres ON books.genre_id = genres.id
+        LEFT JOIN book_genres ON books.id = book_genres.book_id
+        LEFT JOIN genres ON book_genres.genre_id = genres.id
         WHERE bookmarks.user_id = ?
+        GROUP BY books.id
     `;
+    
     connection.query(query, [userId], (err, results) => {
         if (err) {
             console.error('Ошибка при получении закладок:', err);
@@ -178,44 +197,73 @@ app.post('/api/update-about-me', (req, res) => {
 // ЭТО ЕСЛИ ЧТО ОБНОВА ОБЛОЖКИ И АВАТАРОК ДЛЯ САЙТАААААА!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 const multer = require('multer');
 
+// Настройка хранилища для загружаемых файлов
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        // Определяем папку для сохранения файла
-        const folder = req.url.includes('avatar') ? 'public/images/avatars' : 'public/images/covers';
-        cb(null, folder);
+        cb(null, 'public/images/avatars');
     },
     filename: function (req, file, cb) {
-        cb(null, Date.now() + '-' + file.originalname); // Имя файла
+        cb(null, Date.now() + '-' + file.originalname);
     }
 });
 
 const upload = multer({ storage: storage });
+const path = require('path');
+const fs = require('fs');
 
-
-app.post('/api/upload-avatar', (req, res) => {
-    uploadAvatar(req, res, (err) => {
-        if (err) {
-            console.error('Ошибка загрузки аватарки:', err);
-            return res.status(400).json({ error: err.message });
-        }
-        
+// Обработчик загрузки аватарки
+app.post('/api/upload-avatar', upload.single('avatar'), async (req, res) => {
+    try {
         if (!req.file) {
-            return res.status(400).json({ error: 'Файл не был загружен' });
+            return res.status(400).json({ 
+                success: false,
+                error: 'Файл не был загружен' 
+            });
         }
 
         const avatarUrl = `/images/avatars/${req.file.filename}`;
-        console.log('Аватар успешно загружен:', avatarUrl);
-        
-        // Здесь можно обновить аватар пользователя в базе данных
-        // const userId = req.body.userId; // Нужно передать с клиента
-        
-        res.json({ 
-            success: true,
-            avatarUrl: avatarUrl
-        });
-    });
-});
+        const userId = req.body.userId;
 
+        if (!userId) {
+            // Удаляем загруженный файл, если нет userId
+            fs.unlinkSync(req.file.path);
+            return res.status(400).json({ 
+                success: false,
+                error: 'Не указан ID пользователя' 
+            });
+        }
+
+        // Обновляем аватар в базе данных
+        const updateQuery = 'UPDATE users SET avatar_url = ? WHERE id = ?';
+        connection.query(updateQuery, [avatarUrl, userId], (err, results) => {
+            if (err) {
+                console.error('Ошибка обновления аватара:', err);
+                // Удаляем загруженный файл при ошибке
+                fs.unlinkSync(req.file.path);
+                return res.status(500).json({ 
+                    success: false,
+                    error: 'Ошибка сервера' 
+                });
+            }
+
+            res.json({ 
+                success: true,
+                avatarUrl: `http://5.129.203.13:5001${avatarUrl}`
+            });
+        });
+
+    } catch (error) {
+        console.error('Ошибка загрузки аватарки:', error);
+        if (req.file) {
+            // Удаляем загруженный файл при ошибке
+            fs.unlinkSync(req.file.path);
+        }
+        res.status(500).json({ 
+            success: false,
+            error: 'Внутренняя ошибка сервера' 
+        });
+    }
+});
 // Endpoint для загрузки обложки книги
 app.post('/api/upload-cover', upload.single('cover'), (req, res) => {
     if (!req.file) {
@@ -292,7 +340,7 @@ app.get('/api/user/:id', (req, res) => {
         const user = results[0];
         // Добавляем полный URL к аватару, если он есть
         if (user.avatar_url && !user.avatar_url.startsWith('http')) {
-            user.avatar_url = `http://localhost:5000${user.avatar_url}`;
+            user.avatar_url = `http://5.129.203.13:5001${user.avatar_url}`;
         }
         
         res.json(user);
@@ -351,40 +399,70 @@ app.get('/api/friends/check', (req, res) => {
     });
 });
 
-app.post('/api/books/upload', (req, res) => {
-    const { title, author, description, cover_url, publication_year, user_id } = req.body;
+app.post('/api/books/upload', async (req, res) => {
+    const { title, author, description, cover_url, publication_year, genre_id, user_id } = req.body;
 
-    if (!title || !author || !user_id) {
-        return res.status(400).json({ error: 'Обязательные поля: title, author, user_id' });
+    if (!title || !author || !user_id || !genre_id) {
+        return res.status(400).json({ error: 'Обязательные поля: title, author, user_id, genre_id' });
     }
 
-    const insertBookQuery = `
-        INSERT INTO books (title, author, description, cover_url, publication_year)
-        VALUES (?, ?, ?, ?, ?)
-    `;
+    try {
+        // Начинаем транзакцию
+        await connection.promise().query('START TRANSACTION');
 
-    connection.query(insertBookQuery, [title, author, description, cover_url, publication_year], (err, bookResult) => {
-        if (err) {
-            console.error('Ошибка при добавлении книги:', err);
-            return res.status(500).json({ error: 'Ошибка сервера' });
-        }
+        // 1. Добавляем книгу
+        const [bookResult] = await connection.promise().query(
+            `INSERT INTO books (title, author, description, cover_url, publication_year)
+             VALUES (?, ?, ?, ?, ?)`,
+            [title, author, description, cover_url, publication_year]
+        );
 
         const bookId = bookResult.insertId;
 
-        const insertOwnerQuery = `
-            INSERT INTO book_owners (user_id, book_id, is_available)
-            VALUES (?, ?, true)
-        `;
-        connection.query(insertOwnerQuery, [user_id, bookId], (err) => {
-            if (err) {
-                console.error('Ошибка при добавлении владельца:', err);
-                return res.status(500).json({ error: 'Ошибка сервера' });
-            }
+        // 2. Добавляем связь книги с жанром
+        await connection.promise().query(
+            `INSERT INTO book_genres (book_id, genre_id)
+             VALUES (?, ?)`,
+            [bookId, genre_id]
+        );
 
-            res.status(201).json({ message: 'Книга успешно добавлена!', bookId });
+        // 3. Добавляем владельца книги
+        await connection.promise().query(
+            `INSERT INTO book_owners (user_id, book_id, is_available)
+             VALUES (?, ?, true)`,
+            [user_id, bookId]
+        );
+
+        // Коммитим транзакцию
+        await connection.promise().query('COMMIT');
+
+        res.status(201).json({ 
+            message: 'Книга успешно добавлена!', 
+            bookId 
         });
+    } catch (error) {
+        // Откатываем транзакцию при ошибке
+        await connection.promise().query('ROLLBACK');
+        console.error('Ошибка добавления книги:', error);
+        res.status(500).json({ error: 'Ошибка сервера', details: error.message });
+    }
+});
+
+app.get('/api/genres', (req, res) => {
+    const query = 'SELECT * FROM genres';
+    connection.query(query, (err, results) => {
+        if (err) {
+            console.error('Ошибка при получении жанров:', err);
+            res.status(500).json({ error: 'Ошибка сервера' });
+            return;
+        }
+        res.json(results);
     });
 });
+
+
+
+
 app.get('/api/books/:id', (req, res) => {
     const bookId = req.params.id;
     
@@ -404,7 +482,7 @@ app.get('/api/books/:id', (req, res) => {
         const book = results[0];
         // Добавляем полный URL к обложке, если она есть
         if (book.cover_url && !book.cover_url.startsWith('http')) {
-            book.cover_url = `http://localhost:5000${book.cover_url}`;
+            book.cover_url = `http://5.129.203.13:5001${book.cover_url}`;
         }
         
         res.json(book);
@@ -465,7 +543,7 @@ app.get('/api/notifications/:userId', (req, res) => {
         
         results.forEach(notif => {
             if (notif.cover_url && !notif.cover_url.startsWith('http')) {
-                notif.cover_url = `http://localhost:5000${notif.cover_url}`;
+                notif.cover_url = `http://5.129.203.13:5001${notif.cover_url}`;
             }
         });
         
@@ -767,5 +845,65 @@ app.post('/api/exchange/reject', async (req, res) => {
     } catch (error) {
         console.error('Ошибка отклонения запроса:', error);
         res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
+});
+app.delete('/api/books', async (req, res) => {
+    const { user_id, book_id } = req.body;
+
+    if (!user_id || !book_id) {
+        return res.status(400).json({ error: 'Необходимы user_id и book_id' });
+    }
+
+    try {
+        // Проверяем, является ли пользователь владельцем книги
+        const [ownerCheck] = await connection.promise().query(
+            'SELECT 1 FROM book_owners WHERE user_id = ? AND book_id = ?',
+            [user_id, book_id]
+        );
+
+        if (ownerCheck.length === 0) {
+            return res.status(403).json({ error: 'Вы не владеете этой книгой' });
+        }
+
+        // Начинаем транзакцию
+        await connection.promise().query('START TRANSACTION');
+
+        // 1. Удаляем связи книги с жанрами
+        await connection.promise().query(
+            'DELETE FROM book_genres WHERE book_id = ?',
+            [book_id]
+        );
+
+        // 2. Удаляем связи книги с закладками
+        await connection.promise().query(
+            'DELETE FROM bookmarks WHERE book_id = ?',
+            [book_id]
+        );
+
+        // 3. Удаляем владельцев книги
+        await connection.promise().query(
+            'DELETE FROM book_owners WHERE book_id = ?',
+            [book_id]
+        );
+
+        // 4. Удаляем саму книгу
+        const [deleteResult] = await connection.promise().query(
+            'DELETE FROM books WHERE id = ?',
+            [book_id]
+        );
+
+        // Коммитим транзакцию
+        await connection.promise().query('COMMIT');
+
+        if (deleteResult.affectedRows === 0) {
+            return res.status(404).json({ error: 'Книга не найдена' });
+        }
+
+        res.json({ message: 'Книга успешно удалена' });
+    } catch (error) {
+        // Откатываем транзакцию при ошибке
+        await connection.promise().query('ROLLBACK');
+        console.error('Ошибка удаления книги:', error);
+        res.status(500).json({ error: 'Ошибка сервера', details: error.message });
     }
 });
