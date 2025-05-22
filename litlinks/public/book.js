@@ -48,33 +48,6 @@ async function loadBook(bookId, userId) {
         window.location.href = 'index.html';
     }
 }
-
-function renderBook(book, owners, currentUserId) {
-    const container = document.getElementById('book-container');
-    if (!container) {
-        console.error('Контейнер для книги не найден');
-        return;
-    }
-
-    container.innerHTML = `
-        <div class="book-header">
-            <h2>${book.title}</h2>
-            <img src="${book.cover_url || 'default-cover.jpg'}" alt="Обложка" class="book-cover">
-        </div>
-        <div class="book-details">
-            <p><strong>Автор:</strong> ${book.author}</p>
-            ${book.description ? `<p><strong>Описание:</strong> ${book.description}</p>` : ''}
-            ${book.publication_year ? `<p><strong>Год издания:</strong> ${book.publication_year}</p>` : ''}
-        </div>
-        <div class="book-owners">
-            <h3>Владельцы книги:</h3>
-            <ul class="owners-list">
-                ${owners.map(owner => renderOwner(owner, currentUserId, book.id)).join('')}
-            </ul>
-        </div>
-    `;
-}
-
 function renderOwner(owner, currentUserId, bookId) {
     const isCurrentUser = owner.user_id === currentUserId;
     const isAvailable = owner.is_available;
@@ -152,20 +125,7 @@ async function requestExchange(bookId) {
         showNotification(`Ошибка: ${error.message}`, 'error');
     }
 }
-document.addEventListener('DOMContentLoaded', function() {
-    // Получаем ID книги из URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const bookId = urlParams.get('id');
-    
-    if (bookId) {
-        // Загружаем данные книги с сервера
-        fetch(`http://5.129.203.13:5001/api/books/${bookId}`)
-            .then(response => response.json())
-            .then(book => {
-                renderBook(book);
-            });
-    }
-});
+
 
 function renderBook(book) {
     const container = document.getElementById('book-container');
@@ -220,9 +180,22 @@ function renderBook(book) {
         addToBookmarks(book.id);
     });
     
-    document.getElementById('request-exchange')?.addEventListener('click', () => {
-        requestExchange(book.id);
-    });
+ document.getElementById('request-exchange')?.addEventListener('click', async () => {
+    // Получаем владельцев книги
+    const ownersResponse = await fetch(`http://5.129.203.13:5001/api/book-owners/${book.id}`);
+    const owners = await ownersResponse.json();
+    
+    if (owners && owners.length > 0) {
+        const availableOwners = owners.filter(owner => owner.is_available);
+        if (availableOwners.length > 0) {
+            showExchangeModal(availableOwners[0].user_id, book.id);
+        } else {
+            showNotification('Нет доступных владельцев для обмена', 'error');
+        }
+    } else {
+        showNotification('Не найдены владельцы книги', 'error');
+    }
+});
     
     document.getElementById('remove-book')?.addEventListener('click', () => {
         if (confirm('Вы уверены, что хотите удалить эту книгу?')) {
@@ -363,4 +336,226 @@ async function removeBook(bookId) {
         console.error('Ошибка удаления книги:', error);
         showNotification(error.message || 'Произошла ошибка при удалении книги', 'error');
     }
+}
+
+function showExchangeModal(ownerId, bookId) {
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user) {
+        showNotification('Для запроса обмена необходимо войти в систему', 'error');
+        return;
+    }
+
+    // Создаем модальное окно
+    const modal = document.createElement('div');
+    modal.className = 'exchange-modal';
+    modal.innerHTML = `
+        <div class="exchange-modal-content">
+            <button class="close-exchange-modal">&times;</button>
+            <h2>Запрос на обмен</h2>
+            <div class="exchange-books-container">
+                <div class="exchange-book-select">
+                    <h3>Ваша книга для обмена</h3>
+                    <div class="book-selection" id="user-book-selection">
+                        <div class="add-book-btn" id="select-user-book">
+                            <span>+</span>
+                            <p>Выберите книгу</p>
+                        </div>
+                    </div>
+                    <div class="user-books-dropdown" id="user-books-dropdown"></div>
+                </div>
+                <div class="exchange-arrow">⇄</div>
+                <div class="exchange-book-target">
+                    <h3>Книга для получения</h3>
+                    <div class="book-selection" id="target-book-selection">
+                        <img src="default-cover.jpg" alt="Обложка книги">
+                        <p>Загрузка...</p>
+                    </div>
+                    <div class="target-user-info">
+                        <p>Владелец: ${ownerId}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="exchange-actions">
+                <button class="exchange-submit-btn" id="submit-exchange">Отправить запрос</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+    
+    // Загружаем книги пользователя и информацию о книге
+    loadUserBooksForExchange(user.id, bookId, ownerId);
+    async function loadUserBooksForExchange(userId, targetBookId, ownerId) {
+    try {
+        const response = await fetch(`http://5.129.203.13:5001/api/user-books/${userId}`);
+        const books = await response.json();
+        
+        // Фильтруем книги, чтобы исключить ту, на которую хотим обменяться
+        const filteredBooks = books.filter(book => book.id != targetBookId);
+        
+        const dropdown = document.getElementById('user-books-dropdown');
+        if (dropdown) {
+            dropdown.innerHTML = filteredBooks.map(book => `
+                <div class="user-book-item" data-book-id="${book.id}">
+                    <img src="${book.cover_url || 'default-cover.jpg'}" alt="${book.title}">
+                    <p>${book.title}</p>
+                </div>
+            `).join('');
+            
+            // Обработчик выбора книги
+            document.querySelectorAll('.user-book-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const selectedBookId = this.dataset.bookId;
+                    const selectedBook = filteredBooks.find(b => b.id == selectedBookId);
+                    
+                    const userBookSelection = document.getElementById('user-book-selection');
+                    if (userBookSelection) {
+                        userBookSelection.innerHTML = `
+                            <img src="${selectedBook.cover_url || 'default-cover.jpg'}" alt="${selectedBook.title}">
+                            <p>${selectedBook.title}</p>
+                        `;
+                        userBookSelection.dataset.bookId = selectedBookId;
+                    }
+                    
+                    const dropdown = document.getElementById('user-books-dropdown');
+                    if (dropdown) dropdown.classList.remove('show');
+                });
+            });
+        }
+        
+        // Загружаем информацию о владельце
+        const ownerResponse = await fetch(`http://5.129.203.13:5001/api/user/${ownerId}`);
+        const owner = await ownerResponse.json();
+        const targetUserInfo = document.querySelector('.target-user-info');
+        if (targetUserInfo) {
+            targetUserInfo.innerHTML = `
+                <p>Владелец: ${owner.login}</p>
+            `;
+        }
+        
+        // Загружаем информацию о целевой книге
+        const targetBookResponse = await fetch(`http://5.129.203.13:5001/api/books/${targetBookId}`);
+        const targetBook = await targetBookResponse.json();
+        const targetBookSelection = document.getElementById('target-book-selection');
+        if (targetBookSelection) {
+            targetBookSelection.innerHTML = `
+                <img src="${targetBook.cover_url || 'default-cover.jpg'}" alt="${targetBook.title}">
+                <p>${targetBook.title}</p>
+            `;
+        }
+    } catch (error) {
+        console.error('Ошибка загрузки книг:', error);
+        showNotification('Ошибка загрузки данных для обмена', 'error');
+    }
+}
+document.getElementById('submit-exchange').addEventListener('click', async () => {
+    const userBookSelection = document.getElementById('user-book-selection');
+    const userBookId = userBookSelection.dataset.bookId;
+    
+    if (!userBookId) {
+        showNotification('Пожалуйста, выберите книгу для обмена', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch('http://5.129.203.13:5001/api/exchange-request', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                requesterId: user.id,
+                ownerId: ownerId,
+                bookId: bookId,
+                userBookId: userBookId,
+                message: `Запрос на обмен`
+            })
+        });
+
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Ошибка сервера');
+        }
+
+        showNotification('Запрос на обмен успешно отправлен!', 'success');
+        document.querySelector('.exchange-modal')?.remove();
+    } catch (error) {
+        console.error('Ошибка запроса обмена:', error);
+        showNotification(`Ошибка: ${error.message}`, 'error');
+    }
+});
+
+    // Обработчики событий
+    document.getElementById('select-user-book')?.addEventListener('click', toggleBooksDropdown);
+    document.querySelector('.close-exchange-modal')?.addEventListener('click', () => modal.remove());
+    document.getElementById('submit-exchange')?.addEventListener('click', () => submitExchangeRequest(user.id, ownerId, bookId));
+}
+    
+async function submitExchangeRequest(requesterId, ownerId, targetBookId) {
+    const userBookSelection = document.getElementById('user-book-selection');
+    const userBookId = userBookSelection?.dataset?.bookId;
+    
+    if (!userBookId) {
+        showNotification('Пожалуйста, выберите книгу для обмена', 'error');
+        return;
+    }
+    
+    const submitBtn = document.getElementById('submit-exchange');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Отправка...';
+    }
+
+    try {
+        console.log('Отправка запроса на обмен:', {
+            requesterId,
+            ownerId,
+            targetBookId,
+            userBookId
+        });
+
+        const response = await fetch('http://5.129.203.13:5001/api/exchange-request', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                requesterId: parseInt(requesterId),
+                ownerId: parseInt(ownerId),
+                bookId: parseInt(targetBookId),
+                userBookId: parseInt(userBookId),
+                message: 'Запрос на обмен'
+            })
+        });
+
+        const data = await response.json();
+        
+        if (!response.ok) {
+            console.error('Ошибка сервера:', data);
+            throw new Error(data.error || `HTTP error! status: ${response.status}`);
+        }
+
+        showNotification('Запрос на обмен успешно отправлен!', 'success');
+        document.querySelector('.exchange-modal')?.remove();
+
+    } catch (error) {
+        console.error('Полная ошибка запроса обмена:', {
+            error: error.message,
+            stack: error.stack,
+            time: new Date().toISOString()
+        });
+        
+        showNotification(`Ошибка: ${error.message}`, 'error');
+        
+        if (submitBtn) {
+            submitBtn.innerHTML = 'Повторить отправку';
+            submitBtn.onclick = () => submitExchangeRequest(requesterId, ownerId, targetBookId);
+            submitBtn.disabled = false;
+        }
+    }
+}
+function toggleBooksDropdown() {
+    const dropdown = document.getElementById('user-books-dropdown');
+    if (dropdown) dropdown.classList.toggle('show');
 }

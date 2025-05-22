@@ -1,99 +1,126 @@
 document.addEventListener('DOMContentLoaded', function() {
-    loadNotifications();
-    
-    // Добавляем иконку уведомлений в header
-    addNotificationBadge();
-});
-
-function loadNotifications() {
     const user = JSON.parse(localStorage.getItem('user'));
     if (!user) {
         window.location.href = 'index.html';
         return;
     }
+    loadNotifications();
+});
 
-    fetch(`http://5.129.203.13:5001/api/notifications/${user.id}`)
-        .then(response => response.json())
-        .then(notifications => {
-            const container = document.getElementById('notifications-list');
-            
-            if (notifications.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-notifications">
-                        У вас пока нет уведомлений
-                    </div>
-                `;
-                return;
-            }
+async function loadNotifications() {
+    try {
+        const user = JSON.parse(localStorage.getItem('user'));
+        if (!user) {
+            window.location.href = 'index.html';
+            return;
+        }
 
-            container.innerHTML = notifications.map(notif => `
-                <div class="notification-item ${notif.is_read ? '' : 'unread'}" 
-                     data-id="${notif.id}">
-                    ${notif.cover_url ? `
-                        <img src="${notif.cover_url}" 
-                             alt="${notif.book_title || 'Книга'}" 
-                             class="notification-cover">
-                    ` : ''}
-                    <div class="notification-content">
-                        <div class="notification-meta">
-                            <span>${new Date(notif.created_at).toLocaleString()}</span>
-                            ${notif.is_read ? '' : '<span class="new-badge">Новое</span>'}
-                        </div>
-                        <p class="notification-text">
-                            ${getNotificationText(notif)}
-                        </p>
-                        <div class="notification-actions">
-                            ${notif.type === 'exchange_request' ? `
-                                <button class="btn-accept" onclick="acceptExchange(${notif.id})">
-                                    Принять
-                                </button>
-                                <button class="btn-reject" onclick="rejectExchange(${notif.id})">
-                                    Отклонить
-                                </button>
-                            ` : ''}
-                            ${notif.book_id ? `
-                                <button class="notification-button primary" 
-                                        onclick="location.href='book.html?id=${notif.book_id}'">
-                                    Посмотреть книгу
-                                </button>
-                            ` : ''}
-                            <button class="notification-button secondary mark-as-read">
-                                Пометить прочитанным
-                            </button>
-                        </div>
-                    </div>
+        console.log('Загрузка уведомлений для пользователя:', user.id);
+        
+        const response = await fetch(`http://5.129.203.13:5001/api/notifications/${user.id}`);
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        }
+
+        const notifications = await response.json();
+        console.log('Получены уведомления:', notifications);
+        
+        if (!Array.isArray(notifications)) {
+            throw new Error('Сервер вернул невалидные данные');
+        }
+
+        renderNotifications(notifications);
+    } catch (error) {
+        console.error('Ошибка загрузки уведомлений:', error);
+        showNotification('Не удалось загрузить уведомления', 'error');
+        renderNotifications([]);
+    }
+}
+function renderNotifications(notifications) {
+    const container = document.getElementById('notifications-list');
+    
+    if (!container) {
+        console.error('Контейнер для уведомлений не найден');
+        return;
+    }
+
+    if (!notifications || notifications.length === 0) {
+        container.innerHTML = `
+            <div class="empty-notifications">
+                У вас пока нет уведомлений
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = notifications.map(notif => `
+        <div class="notification-item ${notif.is_read ? '' : 'unread'}" 
+             data-id="${notif.id}">
+            ${notif.cover_url ? `
+                <img src="${notif.cover_url}" 
+                     alt="${notif.book_title || 'Книга'}" 
+                     class="notification-cover">
+            ` : ''}
+            <div class="notification-content">
+                <div class="notification-meta">
+                    <span>${new Date(notif.created_at).toLocaleString()}</span>
+                    ${notif.is_read ? '' : '<span class="new-badge">Новое</span>'}
                 </div>
-            `).join('');
+                <p class="notification-text">
+                    ${getNotificationText(notif)}
+                </p>
+                <div class="notification-actions">
+                    ${notif.type === 'exchange_request' ? `
+                        <button class="btn-accept" data-id="${notif.id}">
+                            Принять
+                        </button>
+                        <button class="btn-reject" data-id="${notif.id}">
+                            Отклонить
+                        </button>
+                    ` : ''}
+                    ${notif.book_id ? `
+                        <button class="notification-button primary" 
+                                onclick="location.href='book.html?id=${notif.book_id}'">
+                            Посмотреть книгу
+                        </button>
+                    ` : ''}
+                    <button class="notification-button secondary mark-as-read" data-id="${notif.id}">
+                        Пометить прочитанным
+                    </button>
+                </div>
+            </div>
+        </div>
+    `).join('');
 
-            // Обработчики остаются без изменений
-            document.querySelectorAll('.mark-as-read').forEach(button => {
-                button.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    const notificationId = this.closest('.notification-item').dataset.id;
-                    markAsRead(notificationId);
-                });
-            });
-        })
-        .catch(error => {
-            console.error('Ошибка загрузки уведомлений:', error);
-        });
+    // Делегирование событий для кнопок
+    container.addEventListener('click', function(e) {
+        const notificationId = e.target.closest('[data-id]')?.dataset.id;
+        if (!notificationId) return;
+
+        if (e.target.classList.contains('btn-accept')) {
+            acceptExchange(notificationId);
+        } else if (e.target.classList.contains('btn-reject')) {
+            rejectExchange(notificationId);
+        } else if (e.target.classList.contains('mark-as-read')) {
+            markAsRead(notificationId);
+        }
+    });
 }
 
 function getNotificationText(notification) {
     switch (notification.type) {
         case 'exchange_request':
-            return `Пользователь ${notification.sender_login} хочет обменяться книгой "${notification.book_title}"`;
+            return `Пользователь ${notification.sender_login} хочет обменять книгу "${notification.offered_book_title}" на вашу книгу "${notification.requested_book_title}"`;
         case 'exchange_accepted':
-            return `Пользователь ${notification.sender_login} принял ваш запрос на обмен "${notification.book_title}"`;
+            return `Пользователь ${notification.sender_login} принял ваш запрос на обмен "${notification.offered_book_title}" на "${notification.requested_book_title}"`;
         case 'exchange_rejected':
-            return `Пользователь ${notification.sender_login} отклонил ваш запрос на обмен "${notification.book_title}"`;
-        case 'new_message':
-            return `Новое сообщение от ${notification.sender_login}`;
+            return `Пользователь ${notification.sender_login} отклонил ваш запрос на обмен "${notification.offered_book_title}" на "${notification.requested_book_title}"`;
         default:
             return notification.message || 'У вас новое уведомление';
     }
 }
-
 function markAsRead(notificationId) {
     fetch(`http://5.129.203.13:5001/api/notifications/${notificationId}/read`, {
         method: 'PUT'
@@ -155,110 +182,82 @@ function updateNotificationCounter() {
         });
 }
 
-// Вызываем при загрузке страницы и после важных действий
-document.addEventListener('DOMContentLoaded', function() {
-    checkAuth();
-    
-    // Обновляем счетчик каждые 30 секунд
-    setInterval(updateNotificationCounter, 30000);
-});
 async function acceptExchange(notificationId) {
     try {
         const user = JSON.parse(localStorage.getItem('user'));
         if (!user) {
-            showNotification('Для выполнения действия необходимо войти в систему', 'error');
+            showNotification('Требуется авторизация', 'error');
             return;
         }
 
-        // 1. Получаем полные данные уведомления
-        const notificationResponse = await fetch(`http://5.129.203.13:5001/api/notifications/${notificationId}/full`);
-        const notification = await notificationResponse.json();
-        
-        if (!notification) {
-            throw new Error('Уведомление не найдено');
-        }
+        const btn = document.querySelector(`.notification-item[data-id="${notificationId}"] .btn-accept`);
+        if (btn) btn.disabled = true;
 
-        // Для запросов на обмен проверяем наличие exchange_request_id
-        if (notification.type === 'exchange_request' && !notification.exchange_request_id) {
-            throw new Error('Не удалось найти связанный запрос на обмен');
-        }
-
-        // 2. Отправляем запрос на принятие обмена
         const response = await fetch('http://5.129.203.13:5001/api/exchange/accept', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                requestId: notification.exchange_request_id,
-                userId: user.id,
-                notificationId: notification.id // Добавляем ID уведомления для отслеживания
-            })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ notificationId, userId: user.id })
         });
-        const data = await response.json();
+
+        const result = await response.json();
         
         if (!response.ok) {
-            throw new Error(data.error || 'Ошибка сервера');
+            throw new Error(result.error || 'Ошибка сервера');
         }
 
-        showNotification('Запрос на обмен принят!', 'success');
+        // Удаляем уведомление из DOM
+        document.querySelector(`.notification-item[data-id="${notificationId}"]`)?.remove();
+        showNotification('Обмен подтверждён', 'success');
         
-        // Обновляем список уведомлений и счетчик
-        loadNotifications();
-        updateNotificationCounter();
-        
-        // Обновляем список книг, если находимся на странице профиля
-        if (typeof loadUserBooks === 'function') {
-            loadUserBooks(user.id);
-        }
     } catch (error) {
         console.error('Ошибка:', error);
-        showNotification(`Ошибка: ${error.message}`, 'error');
+        showNotification(error.message, 'error');
+        if (btn) btn.disabled = false;
     }
 }
+
 async function rejectExchange(notificationId) {
     try {
         const user = JSON.parse(localStorage.getItem('user'));
         if (!user) {
-            showNotification('Для выполнения действия необходимо войти в систему', 'error');
+            showNotification('Требуется авторизация', 'error');
             return;
         }
 
-        // 1. Получаем полные данные уведомления
-        const notificationResponse = await fetch(`http://5.129.203.13:5001/api/notifications/${notificationId}/full`);
-        const notification = await notificationResponse.json();
-        
-        if (!notification || !notification.exchange_request_id) {
-            throw new Error('Не удалось найти связанный запрос на обмен');
+        const btn = document.querySelector(`.notification-item[data-id="${notificationId}"] .btn-reject`);
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loader-small"></span> Отклоняем...';
         }
 
-        // 2. Отправляем запрос на отклонение обмена
         const response = await fetch('http://5.129.203.13:5001/api/exchange/reject', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                requestId: notification.exchange_request_id,
-                userId: user.id,
-                notificationId: notification.id
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                notificationId: notificationId, 
+                userId: user.id 
             })
         });
 
-        const data = await response.json();
+        const result = await response.json();
         
         if (!response.ok) {
-            throw new Error(data.error || 'Ошибка сервера');
+            throw new Error(result.error || 'Ошибка сервера при отклонении');
         }
 
-        showNotification('Запрос на обмен отклонен', 'info');
+        // Удаляем уведомление из DOM
+        document.querySelector(`.notification-item[data-id="${notificationId}"]`)?.remove();
+        showNotification('Обмен отклонён', 'info');
         
-        // Обновляем список уведомлений и счетчик
-        loadNotifications();
-        updateNotificationCounter();
     } catch (error) {
-        console.error('Ошибка:', error);
+        console.error('Ошибка при отклонении:', error);
         showNotification(`Ошибка: ${error.message}`, 'error');
+        
+        // Разблокируем кнопку при ошибке
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Отклонить';
+        }
     }
 }
 function renderNotification(notif) {

@@ -69,20 +69,17 @@ if (uploadAvatarBtn) {
             return;
         }
 
-        // Проверка типа файла
         const validTypes = ['image/jpeg', 'image/png', 'image/gif'];
         if (!validTypes.includes(file.type)) {
             showNotification('Разрешены только JPG, PNG и GIF изображения', 'error');
             return;
         }
 
-        // Проверка размера файла (5MB максимум)
         if (file.size > 5 * 1024 * 1024) {
             showNotification('Файл слишком большой. Максимальный размер: 5MB', 'error');
             return;
         }
 
-        // Получаем данные пользователя
         const user = JSON.parse(localStorage.getItem('user'));
         if (!user || !user.id) {
             showNotification('Необходимо авторизоваться', 'error');
@@ -99,16 +96,24 @@ if (uploadAvatarBtn) {
 
             const response = await fetch('http://5.129.203.13:5001/api/upload-avatar', {
                 method: 'POST',
-                body: formData
+                body: formData,
+                headers: {
+                    'Accept': 'application/json'
+                }
             });
 
-            const data = await response.json();
-
-            if (!response.ok || !data.success) {
-                throw new Error(data.error || 'Ошибка сервера');
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Ошибка сервера: ${response.status} - ${errorText.substring(0, 100)}`);
             }
 
-            // Обновляем аватар в интерфейсе и localStorage
+            const data = await response.json();
+            
+            if (!data.success) {
+                throw new Error(data.error || 'Неизвестная ошибка сервера');
+            }
+
+            // Обновляем UI
             profileAvatar.src = data.avatarUrl;
             user.avatarUrl = data.avatarUrl;
             localStorage.setItem('user', JSON.stringify(user));

@@ -72,9 +72,6 @@ window.currentUser = JSON.parse(localStorage.getItem('user'));
 window.onload = function() {
     checkAuth();
 };
-const user = JSON.parse(localStorage.getItem('user'));
-console.log('Пользователь:', user);
-
 document.addEventListener('DOMContentLoaded', function () {
     // Вызов проверки авторизации при загрузке страницы
     checkAuth();
@@ -405,13 +402,14 @@ document.addEventListener('click', (e) => {
         chatContainer.classList.remove('active');
     }
 });
+
 document.addEventListener('DOMContentLoaded', loadRecommendations);
 async function loadRecommendations() {
     try {
         console.log('Загрузка книг...');
         const response = await fetch('http://5.129.203.13:5001/api/books');
         const books = await response.json();
-        console.log('Загруженные книги:', books);
+    
 
         const booksGrid = document.getElementById('books');
         if (booksGrid) {
@@ -421,11 +419,17 @@ async function loadRecommendations() {
                 console.log('Добавление книги:', book.title);
                 const bookCard = document.createElement('div');
                 bookCard.classList.add('book-card');
+                
+                // Делаем всю карточку кликабельной
+                bookCard.style.cursor = 'pointer';
+                bookCard.addEventListener('click', () => {
+                    window.location.href = `book.html?id=${book.id}`;
+                });
 
                 // Обложка книги
                 const bookCover = document.createElement('img');
                 bookCover.classList.add('book-cover');
-                bookCover.src = book.cover_url || 'default-cover.jpg'; // Используем URL обложки или дефолтную картинку
+                bookCover.src = book.cover_url || 'default-cover.jpg';
                 bookCover.alt = book.title;
 
                 // Заголовок книги
@@ -446,7 +450,10 @@ async function loadRecommendations() {
                 // Кнопка добавления в закладки
                 const addToBookmarksButton = document.createElement('button');
                 addToBookmarksButton.textContent = '📚 Добавить в закладки';
-                addToBookmarksButton.addEventListener('click', () => addToBookmarks(book.id));
+                addToBookmarksButton.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Останавливаем всплытие события, чтобы клик по кнопке не открывал книгу
+                    addToBookmarks(book.id);
+                });
 
                 // Собираем элементы в карточку
                 bookCard.appendChild(bookCover);
@@ -456,6 +463,8 @@ async function loadRecommendations() {
                 bookCard.appendChild(addToBookmarksButton);
 
                 booksGrid.appendChild(bookCard);
+                addToBookmarksButton.classList.add('add-to-bookmarks');
+                addToBookmarksButton.textContent = 'Добавить в закладки';
             });
         }
     } catch (error) {

@@ -2,7 +2,7 @@ body {
     font-family: "Tagesschrift", system-ui;
     margin: 0;
     padding: 0;
-    background-color: #eebfbf;
+    background-color: #555;
     color: #fff;
 }
 header {
@@ -10,9 +10,10 @@ header {
     justify-content: space-between;
     align-items: center;
     padding: 10px 20px;
-    background-color: #333;
+    background-color: #555;
     position: relative;
 }
+
 .logo .site-title {
     color: #fff;
     text-decoration: none;
@@ -86,6 +87,7 @@ header {
     cursor: pointer;
     margin-left: 10px;
 }
+
 .sidebar {
     position: fixed;
     top: 0;
@@ -102,6 +104,7 @@ header {
     border-left: 1px solid #6e45e2;
 }
 .sidebar.active {
+    background-color: #121212;
     right: 0;
     visibility: visible;
 }
@@ -129,19 +132,7 @@ header {
     position: relative;
     overflow: hidden;
 }
-.sidebar-menu li::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(110, 69, 226, 0.1), transparent);
-    transition: all 0.6s ease;
-}
-.sidebar-menu li:hover::before {
-    left: 100%;
-}
+
 .sidebar ul {
     list-style-type: none;
     padding: 0;
@@ -304,7 +295,7 @@ main {
 footer {
     text-align: center;
     padding: 10px;
-    background-color: #333;
+    background-color: #121212;
     position: fixed;
     bottom: 0;
     width: 100%;
@@ -327,7 +318,7 @@ footer {
     display: flex;
 }
 .modal-content {
-    background-color: #444;
+    background-color: #121212;
     padding: 30px;
     border-radius: 10px;
     width: 100%;
@@ -434,7 +425,7 @@ footer {
     padding: 0;
 }
 .bookmark-card {
-    background-color: #222;
+    background-color: #121212;
     border-radius: 15px;
     padding: 20px;
     text-align: center;
@@ -564,7 +555,7 @@ footer {
     right: 350px;
 }
 .chat-toggle {
-    background-color: #555;
+    background-color: #121212;
     border: none;
     color: #fff;
     width: 50px;
@@ -597,9 +588,13 @@ footer {
     justify-content: center;
 }
 .chat-container.active {
+    background-color: #121212;
     opacity: 1;
     transform: scale(1);
     visibility: visible;
+}
+[data-theme="light"] .chat-container.active{
+    background-color: #FFE8D6;
 }
 .chat-container.shift {
     right: 350px;
@@ -634,12 +629,13 @@ footer {
 }
 .chat-input {
     padding: 10px;
-    background-color: #444;
+    background-color: #121212;
     border-radius: 0 0 10px 10px;
     display: flex;
     flex-direction: column;
 }
 #message-input {
+    background-color: #555;
     width: 90%;
     min-height: 40px;
     resize: none;
@@ -675,8 +671,9 @@ footer {
     margin: 0 auto;
     max-width: 1200px;
 }
+
 .book-card {
-    background-color: #222;
+    background-color: #121212;
     border-radius: 15px;
     padding: 20px;
     text-align: center;
@@ -685,10 +682,11 @@ footer {
     position: relative;
     overflow: hidden;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 .book-card:hover {
-    transform: translateY(-10px);
-    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
 }
 .book-cover {
     width: 100%;
@@ -759,13 +757,16 @@ footer {
     padding: 0;
 }
 .bookmark-card {
-    background-color: #333;
+    background-color: #121212;
     border-radius: 10px;
     padding: 40px;
     text-align: center;
     transition: transform 0.3s ease;
     cursor: pointer;
     position: relative;
+}
+#notifications-list{
+    background-color: #121212;
 }
 .bookmark-card:hover {
     transform: translateY(-5px);
@@ -882,11 +883,24 @@ header {
 #change-avatar:hover {
     background-color: #777;
 }
-
+#profile-avatar{
+    display: flex;
+    align-items: center;
+    gap: 30px;
+    margin-bottom: 20px;
+}
+.avatar-image{
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #6e45e2;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
 :root {
     --background-color: #000; 
     --text-color: #fff; 
-    --header-bg: #333; 
+    --header-bg: #121212; 
     --sidebar-bg: #444; 
     --button-bg: #555; 
     --button-hover-bg: #777; 
@@ -917,9 +931,7 @@ body {
 header {
     background-color: var(--header-bg);
 }
-.sidebar {
-    background-color: var(--sidebar-bg);
-}
+
 button, .button {
     background-color: #444;
     border-radius: 5px;
@@ -963,7 +975,7 @@ body, .site-name, h1, h2, h3 {
 .profile-info {
     max-width: 800px;
     margin: 30px auto;
-    background-color: #222;
+    background-color: #121212;
     border-radius: 15px;
     padding: 25px;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
@@ -1047,7 +1059,7 @@ body, .site-name, h1, h2, h3 {
     color: #ddd;
 }
 .about-me {
-    background-color: #333;
+    background-color: #242424;
     padding: 20px;
     border-radius: 10px;
     margin-top: 30px;
@@ -1119,7 +1131,7 @@ body, .site-name, h1, h2, h3 {
     display: flex;
 }
 .modal-content {
-    background-color: #333;
+    background-color: #121212;
     padding: 25px;
     border-radius: 10px;
     width: 90%;
@@ -1136,6 +1148,21 @@ body, .site-name, h1, h2, h3 {
     font-size: 24px;
     cursor: pointer;
 }
+
+[data-theme="light"] .close-modal,
+[data-theme="light"] #close-search,
+[data-theme="light"] .close-menu {
+    background: none !important;
+    color: #FF6B6B !important;
+}
+
+[data-theme="light"] .close-modal:hover,
+[data-theme="light"] #close-search:hover,
+[data-theme="light"] .close-menu:hover {
+    background: rgba(255, 107, 107, 0.2) !important;
+}
+
+
 .avatar-upload-container {
     display: flex;
     flex-direction: column;
@@ -1392,7 +1419,7 @@ body, .site-name, h1, h2, h3 {
     width: 90%;
     max-width: 800px;
     padding: 25px;
-    background: linear-gradient(145deg, #3a3a3a 0%, #2a2a2a 100%);
+    background-color: #121212;
     border-radius: 15px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
@@ -1532,14 +1559,14 @@ body, .site-name, h1, h2, h3 {
     width: 6px;
 }
 .search-tab-content::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.1);
+    background: #eebfbf
 }
 .search-tab-content::-webkit-scrollbar-thumb {
-    background: linear-gradient(#6e45e2, #89d4cf);
+    background: linear-gradient(#eebfbf, #89d4cf);
     border-radius: 3px;
 }
 [data-theme="light"] .search-modal-content {
-    background: linear-gradient(145deg, #f5f5f5 0%, #e0e0e0 100%);
+    background: linear-gradient(145deg, #FFDAB9 0%, #e0e0e0 100%);
 }
 [data-theme="light"] .search-bar-modal input {
     background-color: rgba(0, 0, 0, 0.05);
@@ -1963,6 +1990,17 @@ body, .site-name, h1, h2, h3 {
     color: white;
     border: 1px solid #6e45e2;
 }
+[data-theme="light"] .book-button.secondary {
+    background-color: white !important;
+    color: #FF6B6B !important;
+    border: 1px solid #FF6B6B !important;
+}
+[data-theme="light"] .book-button.secondary:hover {
+    background-color: #FFF0F0 !important;
+}
+[data-theme="light"] .book-button.primary:hover {
+    background: linear-gradient(135deg, var(--accent-dark) 0%, #FF8C66 100%) !important;
+}
 
 .book-button:hover {
     transform: translateY(-3px);
@@ -2172,7 +2210,7 @@ body > h2::after {
     gap: 15px;
     padding: 15px;
     margin-bottom: 10px;
-    background-color: #333;
+    background-color: #1d1d1d;
     border-radius: 8px;
     border-left: 4px solid #6e45e2;
     transition: all 0.3s ease;
@@ -2232,4 +2270,946 @@ body > h2::after {
         height: auto;
         max-height: 150px;
     }
+}
+/* Стили для модального окна обмена */
+.exchange-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.exchange-modal-content {
+    background-color: #222;
+    padding: 30px;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 800px;
+    position: relative;
+}
+.exchange-modal h2 {
+    color: #6e45e2;
+    text-align: center;
+    margin-bottom: 20px;
+}
+.exchange-book-select h3, .exchange-book-target h3 {
+    color: #89d4cf;
+    margin-bottom: 15px;
+}
+.close-exchange-modal {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 24px;
+    cursor: pointer;
+}
+
+.exchange-books-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 30px 0;
+}
+
+.exchange-book-select, .exchange-book-target {
+    flex: 1;
+    padding: 20px;
+    background-color: #333;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.exchange-arrow {
+    font-size: 24px;
+    margin: 0 20px;
+    color: #6e45e2;
+}
+
+.book-selection {
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    border: 2px dashed #555;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 15px 0;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.book-selection img {
+    max-width: 120px;
+    max-height: 180px;
+    margin-bottom: 10px;
+}
+
+.add-book-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.add-book-btn span {
+    font-size: 48px;
+    color: #6e45e2;
+    margin-bottom: 10px;
+}
+
+.user-books-dropdown {
+    display: none;
+    max-height: 300px;
+    overflow-y: auto;
+    background-color: #444;
+    border-radius: 8px;
+    padding: 10px;
+    margin-top: 10px;
+}
+
+.user-books-dropdown.show {
+    display: block;
+}
+
+.user-book-item {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    margin-bottom: 5px;
+    background-color: #555;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.user-book-item:hover {
+    background-color: #6e45e2;
+}
+
+.user-book-item img {
+    width: 40px;
+    height: 60px;
+    object-fit: cover;
+    margin-right: 10px;
+}
+
+.exchange-actions {
+    text-align: center;
+}
+
+.exchange-submit-btn {
+    padding: 12px 30px;
+    background: linear-gradient(135deg, #6e45e2 0%, #89d4cf 100%);
+    color: white;
+    border: none;
+    border-radius: 30px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.exchange-submit-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(110, 69, 226, 0.4);
+}
+
+.target-user-info {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #444;
+    font-size: 14px;
+    color: #aaa;
+}
+.owner-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    margin-left: 10px;
+    vertical-align: middle;
+}
+.notification-item.rejected {
+    opacity: 0.7;
+    border-left: 3px solid #ff5252;
+}
+
+.btn-reject:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+.notification-item.accepted {
+    border-left: 3px solid #4caf50;
+    background-color: rgba(76, 175, 80, 0.05);
+}
+
+.notification-item.rejected {
+    border-left: 3px solid #f44336;
+    background-color: rgba(244, 67, 54, 0.05);
+}
+
+.notification-item .btn-accept:disabled,
+.notification-item .btn-reject:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+.loader-small {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1s ease-in-out infinite;
+    margin-right: 5px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.notification-item.accepted {
+    border-left: 3px solid #4CAF50;
+    background-color: rgba(76, 175, 80, 0.05);
+}
+
+.notification-item.rejected {
+    border-left: 3px solid #F44336;
+    background-color: rgba(244, 67, 54, 0.05);
+}
+/* Общие стили для светлой темы */
+[data-theme="light"] {
+    --background-color: #fff;
+    --text-color: #000;
+    --header-bg: #f5f5f5;
+    --sidebar-bg: #e9ecef;
+    --button-bg: #6e45e2;
+    --button-hover-bg: #5a35cc;
+    --accent-color: #FF6B6B; 
+    --accent-gradient: linear-gradient(135deg, #FF6B6B 0%, #FFA07A 100%);
+    --accent-light: #FFA07A; /* Светло-персиковый */
+    --accent-dark: #E55C5C; /* Темный красно-персиковый */
+    --border-color: #e0e0e0;
+}
+
+/* Основные элементы */
+[data-theme="light"] body {
+    background-color: var(--background-color);
+    color: var(--text-color);
+}
+
+[data-theme="light"] header {
+    background-color: #FFDAB9;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .sidebar {
+    background-color: var(--sidebar-bg);
+    box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .logo-text {
+    color: var(--text-color);
+}
+[data-theme="light"] #user-about{
+    color: #000; 
+}
+/* Кнопки */
+[data-theme="light"] button,
+[data-theme="light"] .button {
+    background-color: var(--button-bg);
+    color: white;
+}
+
+[data-theme="light"] button:hover,
+[data-theme="light"] .button:hover {
+    background-color: var(--button-hover-bg);
+}
+
+/* Карточки */
+[data-theme="light"] .book-card,
+[data-theme="light"] .bookmark-card {
+    background-color: #FFDAB9;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] .book-card h3,
+[data-theme="light"] .bookmark-card h3 {
+    color: var(--text-color);
+}
+
+[data-theme="light"] .book-card p,
+[data-theme="light"] .bookmark-card p {
+    color: #666;
+}
+
+/* Формы */
+[data-theme="light"] input,
+[data-theme="light"] textarea,
+[data-theme="light"] select {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+}
+
+[data-theme="light"] input:focus,
+[data-theme="light"] textarea:focus {
+    background-color: rgba(0, 0, 0, 0.08);
+}
+
+/* Заголовки */
+[data-theme="light"] h1,
+[data-theme="light"] h2,
+[data-theme="light"] h3 {
+    color: var(--accent-color);
+}
+
+/* Профиль */
+[data-theme="light"] .profile-info {
+    background-color: #FFE8D6;
+    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .user-details p {
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* Уведомления */
+[data-theme="light"] .notification-item {
+    background-color: white;
+    border-left: 4px solid var(--accent-color);
+}
+
+[data-theme="light"] .notification-item.unread {
+    background-color: #f8f9fa;
+}
+
+/* Модальные окна */
+[data-theme="light"] .modal-content,
+[data-theme="light"] .exchange-modal-content {
+    background-color: #FFDAB9;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Чат */
+[data-theme="light"] .chat-container {
+    background-color: white;
+    border: 1px solid var(--border-color);
+}
+
+[data-theme="light"] .chat-messages {
+    background-color: #f9f9f9;
+}
+
+/* Подвал */
+[data-theme="light"] footer {
+    background-color: var(--header-bg);
+    color: var(--text-color);
+}
+
+/* Специфические элементы */
+[data-theme="light"] .book-list h2::after,
+[data-theme="light"] .bookmarks h2::after {
+    background: linear-gradient(135deg, #6e45e2 0%, #89d4cf 100%);
+}
+
+[data-theme="light"] .remove-button {
+    background-color: rgba(0, 0, 0, 0.7);
+}
+
+[data-theme="light"] .bookmark-button {
+    background-color: rgba(0, 0, 0, 0.7);
+}
+
+/* Адаптация для светлой темы - дополнительные элементы */
+[data-theme="light"] .about-me {
+    background-color: #f5f5f5;
+}
+
+[data-theme="light"] #about-me-text {
+    background-color: white;
+    border-left: 3px solid var(--accent-color);
+}
+
+[data-theme="light"] .sidebar-menu li a,
+[data-theme="light"] .sidebar-menu li button {
+    background-color: #f0f0f0;
+    color: var(--text-color);
+}
+
+[data-theme="light"] .sidebar-menu li a:hover,
+[data-theme="light"] .sidebar-menu li button:hover {
+    background-color: #e0e0e0;
+}
+
+[data-theme="light"] .sidebar ul li button.logout-icon {
+    background-color: #ff4441;
+    color: white;
+}
+[data-theme="light"] .site-name {
+    color: #000 !important;
+}
+[data-theme="light"] .search-bar button,
+[data-theme="light"] .theme-toggle {
+    background-color: transparent !important;
+    color: #000 !important;
+}
+[data-theme="light"] #message-input{
+    background-color: #FFDAB9;
+}
+
+[data-theme="light"] .chat-input {
+    background-color: #FFE8D6 !important; /* Светло-персиковый */
+    color: #000 !important;
+}
+[data-theme="light"] #send-message{
+    background-color: #ff4441;
+}
+[data-theme="light"] .chat-toggle {
+    background-color: #FFDAB9 !important; /* Персиковый */
+    color: #000 !important;
+}
+[data-theme="light"] .sidebar,
+[data-theme="light"] .sidebar.active {
+    background: #FFE8D6 !important; /* Светло-персиковый */
+    border-left: 1px solid #FFDAB9 !important;
+}
+
+[data-theme="light"] .sidebar ul li a,
+[data-theme="light"] .sidebar ul li button {
+    color: #000 !important;
+    background-color: #FFDAB9 !important; /* Персиковый */
+}
+[data-theme="light"] .profile-info h2 {
+    color: #000 !important;
+}
+[data-theme="light"] .profile-login,
+[data-theme="light"] .profile-email,
+[data-theme="light"] .user-details p span {
+    color: #000 !important;
+}
+[data-theme="light"] .book-title-small,
+[data-theme="light"] #user-books-grid div {
+    color: #000 !important;
+}
+[data-theme="light"] .filter-genre label {
+    color: #000 !important;
+}
+[data-theme="light"] .search-tab.active,
+[data-theme="light"] .search-button-active {
+    background-color: #FFA07A !important;
+    color: #000 !important;
+    border: 1px solid #FFDAB9 !important;
+}
+[data-theme="light"] #book-container {
+    background-color: #FFE8D6 !important;
+    color: #000 !important;
+}
+[data-theme="light"] .notifications-list {
+    background-color: #FFE8D6 !important;
+}
+[data-theme="light"] .notification-item {
+    background-color: #FFDAB9 !important;
+    color: #000 !important;
+}
+
+[data-theme="light"] .notification-text,
+[data-theme="light"] .notification-meta {
+    color: #000 !important;
+}
+[data-theme="light"] .bookmark-button {
+    background-color: #FF6B6B !important;
+    color: white !important;
+}
+[data-theme="light"] .bookmark-button:hover {
+    background-color: #E55C5C !important;
+}
+[data-theme="light"] .book-list h2::after,
+[data-theme="light"] .bookmarks h2::after,
+[data-theme="light"] .notifications-title::after,
+[data-theme="light"] #upload-form h2::after {
+    background: var(--accent-gradient) !important;
+}
+[data-theme="light"] .profile-info::before,
+[data-theme="light"] .book-card::before,
+[data-theme="light"] .bookmark-card::before {
+    background: var(--accent-gradient) !important;
+}
+
+[data-theme="light"] .search-tab.active::after {
+    background: var(--accent-gradient) !important;
+}
+
+[data-theme="light"] #change-avatar,
+[data-theme="light"] #add-friend-button,
+[data-theme="light"] .friend-button,
+[data-theme="light"] .book-button.primary {
+    background: var(--accent-gradient) !important;
+}
+
+[data-theme="light"] #edit-about-me {
+    color: #FF6B6B !important;
+    border-color: #FF6B6B !important;
+}
+
+[data-theme="light"] #edit-about-me:hover {
+    background: rgba(255, 107, 107, 0.1) !important;
+}
+
+/* Дополнительные элементы, которые могли быть пропущены */
+[data-theme="light"] .remove-button:hover,
+[data-theme="light"] .bookmark-button:hover {
+    background-color: var(--accent-dark) !important;
+}
+
+[data-theme="light"] .close-menu:hover {
+    background-color: rgba(255, 107, 107, 0.2) !important;
+}
+
+[data-theme="light"] .sidebar-menu li::before {
+    background: linear-gradient(90deg, transparent, rgba(255, 107, 107, 0.1), transparent) !important;
+}
+[data-theme="light"] .add-book-button {
+    background: var(--accent-gradient) !important;
+    color: white !important;
+    border: none !important;
+}
+[data-theme="light"] .add-book-button:hover {
+    background: linear-gradient(135deg, var(--accent-dark) 0%, #FF8C66 100%) !important;
+}
+[data-theme="light"] .search-tab:not(.active) {
+    background: transparent !important;
+    color: #666 !important;
+}
+
+[data-theme="light"] .search-tab.active {
+    background: #FFA07A !important;
+    color: var(--accent-color) !important;
+}
+
+/* 3. Кнопки в сайдбаре */
+[data-theme="light"] .sidebar #open-login,
+[data-theme="light"] .sidebar #open-register,
+[data-theme="light"] .sidebar .profile-button,
+[data-theme="light"] .sidebar .bookmarks-button,
+[data-theme="light"] .sidebar .notification-menu-item {
+    background: var(--accent-gradient) !important;
+    color: white !important;
+    border: none !important;
+}
+
+[data-theme="light"] .sidebar .logout-icon {
+    background: #ff4444 !important;
+    color: white !important;
+}
+
+[data-theme="light"] .sidebar ul li a:hover,
+[data-theme="light"] .sidebar ul li button:hover {
+    background: var(--accent-dark) !important;
+}
+
+/* 4. Форма добавления книги */
+[data-theme="light"] #upload-form {
+    background: #FFE8D6 !important; /* Светло-персиковый фон */
+    border: 1px solid #FFDAB9 !important;
+}
+
+[data-theme="light"] #upload-form h2::after {
+    background: var(--accent-gradient) !important;
+}
+[data-theme="light"] h2::after{
+    background: linear-gradient(135deg, var(--accent-dark) 0%, #FF8C66 100%) !important;
+}
+
+[data-theme="light"] #upload-form input,
+[data-theme="light"] #upload-form textarea,
+[data-theme="light"] #upload-form select {
+    background: white !important;
+    color: #333 !important;
+    border: 1px solid #FFDAB9 !important;
+}
+
+[data-theme="light"] #upload-form input:focus,
+[data-theme="light"] #upload-form textarea:focus {
+    border-color: var(--accent-color) !important;
+    box-shadow: 0 0 0 2px rgba(255, 107, 107, 0.3) !important;
+}
+
+[data-theme="light"] #upload-form button[type="submit"] {
+    background: var(--accent-gradient) !important;
+    color: white !important;
+    border: none !important;
+}
+
+[data-theme="light"] #upload-form button[type="submit"]:hover {
+    background: linear-gradient(135deg, var(--accent-dark) 0%, #FF8C66 100%) !important;
+}
+
+/* Дополнительные элементы формы */
+[data-theme="light"] .file-label {
+    background: var(--accent-color) !important;
+}
+
+[data-theme="light"] .file-label:hover {
+    background: var(--accent-dark) !important;
+}
+
+[data-theme="light"] .upload-btn {
+    background: #4CAF50 !important;
+}
+
+[data-theme="light"] .upload-btn:hover {
+    background: #3e8e41 !important;
+}
+[data-theme="light"] .close-menu {
+    color: #FF6B6B !important; /* Красно-персиковый цвет */
+}
+
+[data-theme="light"] .close-menu:hover {
+    background-color: rgba(255, 107, 107, 0.2) !important;
+}
+[data-theme="light"] #auth-link a,
+[data-theme="light"] .sidebar #bookmarks-link a {
+    background: var(--accent-gradient) !important;
+    color: white !important;
+    border: none !important;
+}
+
+[data-theme="light"] #auth-link a:hover,
+[data-theme="light"] .sidebar #bookmarks-link a:hover {
+    background: linear-gradient(135deg, var(--accent-dark) 0%, #FF8C66 100%) !important;
+}
+/* Кнопка добавления в закладки на главной */
+.add-to-bookmarks{
+    background: #555;
+    color: #000;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 5px;
+}
+[data-theme="light"] .add-to-bookmarks {
+    background: #FF6B6B !important; /* Основной красно-персиковый */
+    color: white !important;
+    border: none !important;
+    padding: 8px 15px !important;
+    border-radius: 5px !important;
+}
+
+[data-theme="light"] .add-to-bookmarks:hover {
+    background: #E55C5C !important; /* Темнее при наведении */
+}
+
+/* Кнопка добавления книги в профиле */
+[data-theme="light"] #add-book-button {
+    background: var(--accent-gradient) !important;
+    color: white !important;
+    border: none !important;
+}
+
+[data-theme="light"] #add-book-button:hover {
+    background: linear-gradient(135deg, var(--accent-dark) 0%, #FF8C66 100%) !important;
+}
+[data-theme="light"] #search-input-modal:focus {
+    outline: none;
+    border-color: #FF6B6B !important;
+    box-shadow: 0 0 0 2px rgba(255, 107, 107, 0.3) !important;
+}
+
+[data-theme="light"] .notification-button.primary,
+[data-theme="light"] .btn-accept {
+    background: #FF6B6B !important;
+    color: white !important;
+    border: none !important;
+}
+.notification-button.primary{
+    background: #555;
+    color: #000;
+    border:none;
+}
+
+[data-theme="light"] .notification-button.secondary.mark-as-read,
+[data-theme="light"] .btn-reject {
+    background: #FFA07A !important;
+    color: white !important;
+    border: none !important;
+}
+ .notification-button.secondary.mark-as-read{
+    background: #707070;
+    color: #000;
+    border:none;
+ }
+
+[data-theme="light"] .btn-accept:hover {
+    background: #E55C5C !important;
+}
+
+[data-theme="light"] .btn-reject:hover {
+    background: #FF8C66 !important;
+}
+[data-theme="light"] .exchange-book-select,
+[data-theme="light"] .exchange-book-target {
+    background: #FFE8D6 !important;
+    border: 1px solid #FFDAB9 !important;
+}
+
+/* Области выбора книг */
+[data-theme="light"] #user-book-selection.book-selection,
+[data-theme="light"] #target-book-selection.book-selection {
+    background: #FFDAB9 !important;
+    border: 2px dashed #FF6B6B !important;
+}
+
+/* Информация о пользователе */
+[data-theme="light"] .target-user-info {
+    background: #FFE8D6 !important;
+    color: #333 !important;
+}
+
+/* Крестик по середине */
+[data-theme="light"] .exchange-arrow {
+    color: #FF6B6B !important;
+    font-size: 24px !important;
+}
+
+/* Кнопка отправки */
+[data-theme="light"] #submit-exchange.exchange-submit-btn {
+    background: linear-gradient(135deg, #FF6B6B 0%, #FFA07A 100%) !important;
+    color: white !important;
+    border: none !important;
+}
+
+[data-theme="light"] #submit-exchange.exchange-submit-btn:hover {
+    background: linear-gradient(135deg, #E55C5C 0%, #FF8C66 100%) !important;
+}
+
+/* Крестик закрытия */
+[data-theme="light"] .close-exchange-modal {
+    color: #FF6B6B !important;
+    background: none !important;
+}
+
+[data-theme="light"] .close-exchange-modal:hover {
+    background: rgba(255, 107, 107, 0.2) !important;
+}
+[data-theme="light"] #user-books-dropdown.user-books-dropdown.show {
+    background: #FFE8D6 !important; /* Светло-персиковый фон */
+    border: 1px solid #FFDAB9 !important;
+}
+[data-theme="light"] .user-book-item {
+    background: #FFDAB9 !important; /* Яркий персиковый */
+    border: 1px solid #FFA07A !important;
+    color: #333 !important;
+}
+
+[data-theme="light"] .user-book-item:hover {
+    background: #FFA07A !important; /* Ещё ярче при наведении */
+    color: white !important;
+}
+/* Общие медиа-запросы для мобильных устройств */
+@media (max-width: 768px) {
+  /* Header */
+  header {
+    padding: 8px 10px;
+    flex-wrap: wrap;
+  }
+  
+  .logo .site-title {
+    font-size: 20px;
+  }
+  
+  .logo-image {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .header-controls {
+    order: 2;
+    margin-left: 0;
+  }
+  
+  /* Search bar */
+  .search-bar {
+    order: 3;
+    width: 100%;
+    margin: 10px 0;
+    position: static;
+    transform: none;
+  }
+  
+  /* Sidebar */
+  .sidebar {
+    width: 80%;
+    right: -80%;
+  }
+  
+  /* Main content */
+  main {
+    padding: 10px;
+    margin-top: 10px;
+  }
+  
+  /* Profile info */
+  .profile-info {
+    margin: 15px;
+    padding: 15px;
+  }
+  
+  .avatar-section {
+    flex-direction: column;
+    text-align: center;
+    gap: 15px;
+  }
+  
+  .avatar-image {
+    width: 120px;
+    height: 120px;
+    margin-top: -60px;
+  }
+  
+  /* Book cards */
+  .books-grid, .bookmarks-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 15px;
+  }
+  
+  .book-cover, .bookmark-card img {
+    height: 180px;
+  }
+  
+  .book-title, .bookmark-card h3 {
+    font-size: 14px;
+  }
+  
+  .book-author, .bookmark-card p {
+    font-size: 12px;
+  }
+  
+  /* Book page */
+  .book-header {
+    flex-direction: column;
+  }
+  
+  .book-cover-large {
+    width: 100%;
+    height: auto;
+    max-height: 400px;
+    margin-bottom: 20px;
+  }
+  
+  .book-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  /* Chat widget */
+  .chat-widget {
+    bottom: 10px;
+    right: 10px;
+  }
+  
+  .chat-container {
+    width: 90%;
+    max-width: 300px;
+    right: 10px;
+  }
+  
+  .chat-widget.shift, .chat-container.shift {
+    right: 10px;
+  }
+  
+  /* Notifications */
+  .notifications-list {
+    padding: 10px;
+  }
+  
+  .notification-item {
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+  }
+  
+  .notification-cover {
+    width: 100%;
+    height: auto;
+    max-height: 150px;
+  }
+  
+  /* Modal windows */
+  .modal-content, .search-modal-content {
+    width: 95%;
+    padding: 15px;
+  }
+  
+  /* Exchange modal */
+  .exchange-books-container {
+    flex-direction: column;
+  }
+  
+  .exchange-arrow {
+    margin: 15px 0;
+    transform: rotate(90deg);
+  }
+  
+  /* Upload form */
+  #upload-form {
+    padding: 15px;
+    margin: 15px;
+  }
+  
+  /* Footer */
+  footer {
+    padding: 5px;
+    font-size: 12px;
+  }
+  
+  /* Hide some elements on mobile */
+  .search-text {
+    display: none;
+  }
+}
+
+/* Дополнительные медиа-запросы для очень маленьких экранов */
+@media (max-width: 480px) {
+  /* Ещё более компактные стили */
+  .books-grid, .bookmarks-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+  
+  .book-cover, .bookmark-card img {
+    height: 150px;
+  }
+  
+  .profile-info {
+    margin: 10px;
+    padding: 10px;
+  }
+  
+  .user-details p {
+    font-size: 14px;
+  }
+  
+  .user-details p strong {
+    width: 80px;
+    display: block;
+  }
+  
+  .modal-content, .search-modal-content {
+    width: 100%;
+    border-radius: 0;
+  }
+  
+  .exchange-modal-content {
+    height: 100%;
+    overflow-y: auto;
+  }
 }

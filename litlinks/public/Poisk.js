@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Обработка поискового запроса
     searchInput.addEventListener('input', function() {
         const query = this.value.trim();
-        if (query.length > 2) {
+        if (query.length > 1) {
             performSearch(query);
         } else {
             clearResults();
