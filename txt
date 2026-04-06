@@ -2,7 +2,7 @@
 #include <iostream>
 #include <vector>
 
-// Функция для рисования текстуры "плиткой" (для стен)
+// Функция для рисования текстуры
 void drawTiledTexture(sf::RenderWindow& window, const sf::Texture& texture, sf::FloatRect area) {
     sf::Sprite sprite(texture);
     for (float x = area.left; x < area.left + area.width; x += texture.getSize().x) {
@@ -15,18 +15,18 @@ void drawTiledTexture(sf::RenderWindow& window, const sf::Texture& texture, sf::
 
 int main()
 {
-    // === ОКНО НА ВЕСЬ ЭКРАН ===
+    //ОКНО НА ВЕСЬ ЭКРАН 
     sf::RenderWindow window(sf::VideoMode::getFullscreenModes()[0], "My Pixel RPG", sf::Style::Fullscreen);
     window.setFramerateLimit(60);
 
     const int WORLD_WIDTH = 2000;
     const int WORLD_HEIGHT = 2000;
 
-    // === ЗАГРУЗКА ГЕРОЯ ===
+    //  ЗАГРУЗКА ГЕРОЯ 
     std::vector<sf::Texture> texturesDown(4);
     std::vector<sf::Texture> texturesUp(4);
     std::vector<sf::Texture> texturesLeft(4);
-    std::vector<sf::Texture> texturesRight(4); // Исправленный тип
+    std::vector<sf::Texture> texturesRight(4); 
 
     for (int i = 1; i <= 4; i++) {
         texturesDown[i - 1].loadFromFile("hero_down_" + std::to_string(i) + ".png");
@@ -34,14 +34,26 @@ int main()
         texturesLeft[i - 1].loadFromFile("hero_left_" + std::to_string(i) + ".png");
         texturesRight[i - 1].loadFromFile("hero_right_" + std::to_string(i) + ".png");
 
-        // ЧЕТКИЙ ПИКСЕЛЬ-АРТ
+        // ПИКСЕЛЬ-АРТ
         texturesDown[i - 1].setSmooth(false);
         texturesUp[i - 1].setSmooth(false);
         texturesLeft[i - 1].setSmooth(false);
         texturesRight[i - 1].setSmooth(false);
     }
 
-    // === ОКРУЖЕНИЕ ===
+    //  ТЕКСТУРЫ АТАКИ
+    std::vector<sf::Texture> atkDown(2), atkUp(2), atkLeft(2), atkRight(2);
+    for (int i = 1; i <= 2; i++) {
+        atkDown[i - 1].loadFromFile("atk_down_" + std::to_string(i) + ".png");
+        atkUp[i - 1].loadFromFile("atk_up_" + std::to_string(i) + ".png");
+        atkLeft[i - 1].loadFromFile("atk_left_" + std::to_string(i) + ".png");
+        atkRight[i - 1].loadFromFile("atk_right_" + std::to_string(i) + ".png");
+
+        atkDown[i - 1].setSmooth(false); atkUp[i - 1].setSmooth(false);
+        atkLeft[i - 1].setSmooth(false); atkRight[i - 1].setSmooth(false);
+    }
+
+    // ОКРУЖЕНИЕ
     sf::Texture texFloor;
     texFloor.loadFromFile("floor.png");
     texFloor.setSmooth(false);
@@ -50,7 +62,7 @@ int main()
     texWall.loadFromFile("wall.png");
     texWall.setSmooth(false);
 
-    // === HUD (ИНТЕРФЕЙС) ===
+    //  HUD (ИНТЕРФЕЙС)
     sf::Texture texHudBg;
     texHudBg.loadFromFile("hud_bg.png");
     texHudBg.setSmooth(false);
@@ -66,16 +78,31 @@ int main()
     texMp.setSmooth(false);
     sf::Sprite mpBar(texMp);
 
-    // === ГЕРОЙ ===
+    sf::Texture texXp;
+    texXp.loadFromFile("xp_bar.png");
+    texXp.setSmooth(false);
+    sf::Sprite xpBar(texXp);
+
+    sf::Texture texWeapon;
+    texWeapon.loadFromFile("weapon_bar.png");
+    texWeapon.setSmooth(false);
+    sf::Sprite weaponBar(texWeapon);
+
+    sf::Texture texInv;
+    texInv.loadFromFile("inv_bar.png");
+    texInv.setSmooth(false);
+    sf::Sprite invBar(texInv);
+
+    //  ГЕРОЙ
     sf::Sprite hero(texturesDown[0]);
     hero.setPosition(100, 100);
     hero.setScale(2.f, 2.f);
 
-    // === КАМЕРА ===
+    //  КАМЕРА
     sf::View camera;
     camera.setSize(1280, 720);
 
-    // Центрируем камеру на СЕРЕДИНЕ героя (учитываем его масштаб)
+    // Центрируем камеру на СЕРЕДИНЕ героя
     sf::FloatRect heroBounds = hero.getGlobalBounds();
     camera.setCenter(
         heroBounds.left + heroBounds.width / 2.f,
@@ -88,7 +115,7 @@ int main()
         heroBounds.top + heroBounds.height / 2.f
     );
 
-    // === СТЕНЫ ===
+    //  СТЕНЫ 
     std::vector<sf::RectangleShape> walls;
     float wallThickness = 64;
 
@@ -99,7 +126,7 @@ int main()
 
     for (auto& w : walls) w.setFillColor(sf::Color::Transparent);
 
-    // === ПЕРЕМЕННЫЕ ===
+    //  ПЕРЕМЕННЫЕ 
     int currentFrame = 0;
     float animationSpeed = 0.15f;
     float animationTimer = 0.f;
@@ -107,6 +134,12 @@ int main()
     bool isMoving = false;
     float speed = 250.0f;
     sf::Clock clock;
+
+    // Переменные для атаки
+    bool isAttacking = false;
+    int attackFrame = 0;
+    float attackTimer = 0.f;
+    const float ATTACK_SPEED = 0.2f; // Скорость анимации атаки
 
     auto checkCollision = [&](sf::FloatRect heroRect) -> bool {
         for (auto& wall : walls) {
@@ -138,7 +171,40 @@ int main()
             movement.y /= length;
         }
 
-        // === ДВИЖЕНИЕ И КОЛЛИЗИЯ ===
+        //  ОБРАБОТКА МЫШИ (НАПРАВЛЕНИЕ АТАКИ) 
+        sf::Vector2i mousePixel = sf::Mouse::getPosition(window);
+        sf::Vector2f mouseWorld = window.mapPixelToCoords(mousePixel, camera);
+
+        // Вектор от героя к мыши
+        sf::Vector2f toMouse = mouseWorld - hero.getPosition();
+        float dx = toMouse.x;
+        float dy = toMouse.y;
+
+        // Определяем направление по мыши
+        if (std::abs(dx) > std::abs(dy)) {
+            // Горизонтальное направление
+            if (dx > 0) currentDirection = 3; // Вправо
+            else currentDirection = 2;        // Влево
+        }
+        else {
+            // Вертикальное направление
+            if (dy > 0) currentDirection = 0; // Вниз
+            else currentDirection = 1;        // Вверх
+        }
+
+        //ОБРАБОТКА ЛКМ (АТАКА) 
+        bool lmbPressed = sf::Mouse::isButtonPressed(sf::Mouse::Left);
+
+        if (lmbPressed && !isAttacking) {
+            isAttacking = true;
+            attackFrame = 0;
+            attackTimer = 0.f;
+        }
+        if (!lmbPressed) {
+            isAttacking = false;
+        }
+
+        //  ДВИЖЕНИЕ И КОЛЛИЗИЯ
         if (isMoving) {
             sf::Vector2f oldPos = hero.getPosition();
             hero.move(movement.x * speed * deltaTime, 0);
@@ -152,7 +218,27 @@ int main()
             if (bounds.top < 0) hero.setPosition(hero.getPosition().x, 0);
             if (bounds.left + bounds.width > WORLD_WIDTH) hero.setPosition(WORLD_WIDTH - bounds.width, hero.getPosition().y);
             if (bounds.top + bounds.height > WORLD_HEIGHT) hero.setPosition(hero.getPosition().x, WORLD_HEIGHT - bounds.height);
+        }
 
+        // === АНИМАЦИЯ ===
+        if (isAttacking) {
+            // Анимация атаки (2 кадра)
+            attackTimer += deltaTime;
+            if (attackTimer >= ATTACK_SPEED) {
+                attackFrame = (attackFrame + 1) % 2;
+                attackTimer = 0.f;
+            }
+
+            // Применяем анимацию атаки в направлении МЫШИ
+            switch (currentDirection) {
+            case 0: hero.setTexture(atkDown[attackFrame]); break;
+            case 1: hero.setTexture(atkUp[attackFrame]); break;
+            case 2: hero.setTexture(atkLeft[attackFrame]); break;
+            case 3: hero.setTexture(atkRight[attackFrame]); break;
+            }
+        }
+        else if (isMoving) {
+            // Анимация ходьбы
             animationTimer += deltaTime;
             if (animationTimer >= animationSpeed) {
                 currentFrame = (currentFrame + 1) % 4;
@@ -165,10 +251,19 @@ int main()
                 }
             }
         }
+        else {
+            // Стоит на месте (1-й кадр)
+            switch (currentDirection) {
+            case 0: hero.setTexture(texturesDown[0]); break;
+            case 1: hero.setTexture(texturesUp[0]); break;
+            case 2: hero.setTexture(texturesLeft[0]); break;
+            case 3: hero.setTexture(texturesRight[0]); break;
+            }
+        }
 
         camera.setCenter(hero.getPosition());
 
-        // === ОТРИСОВКА МИРА ===
+        //  ОТРИСОВКА МИРА 
         window.clear(sf::Color(20, 20, 20));
         window.setView(camera);
 
@@ -193,9 +288,8 @@ int main()
         // ГЕРОЙ
         window.draw(hero);
 
-        // ==========================================
-        // === HUD (НЕЗАВИСИМЫЕ БАРЫ) ===
-        // ==========================================
+        // HUD 
+
         window.setView(window.getDefaultView());
         sf::Vector2u winSize = window.getSize();
 
@@ -207,29 +301,54 @@ int main()
         float bgWidth = hudBg.getGlobalBounds().width;
         float bgHeight = hudBg.getGlobalBounds().height;
 
-        // 3. Позиция фона (Центр низа)
+        // 3. Позиция фона
         hudBg.setPosition((winSize.x - bgWidth) / 2.f, winSize.y - bgHeight - 50);
         window.draw(hudBg);
 
-        // 4. HP BAR - НАСТРОЙКИ ОТДЕЛЬНО
+        // 4. HP BAR
         float hpScale = 4.0f;
         hpBar.setScale(hpScale, hpScale);
 
-        // КООРДИНАТЫ HP BAR (Меняй эти цифры!)
-        float hpX = 500;   // Отступ слева (0 = край экрана)
-        float hpY = 650;   // Отступ сверху (0 = край экрана)
+        float hpX = 500; 
+        float hpY = 650;   
         hpBar.setPosition(hpX, hpY);
         window.draw(hpBar);
 
-        // 5. MP BAR - НАСТРОЙКИ ОТДЕЛЬНО
+        // 5. MP BAR
         float mpScale = 4.0f;
         mpBar.setScale(mpScale, mpScale);
 
-        // КООРДИНАТЫ MP BAR (Меняй эти цифры!)
-        float mpX = 500;   // Отступ слева
-        float mpY = 710;   // Отступ сверху (поставь больше чем hpY, чтобы был ниже)
+        float mpX = 500;
+        float mpY = 710;   
         mpBar.setPosition(mpX, mpY);
         window.draw(mpBar);
+
+       // 6. XP BAR
+        float xpScale = 4.0f;
+        xpBar.setScale(xpScale, xpScale);
+
+        float xpX = 495;
+        float xpY = 760;
+        xpBar.setPosition(xpX, xpY);
+        window.draw(xpBar);
+
+        // 7. Weapon BAR
+        float weaponScale = 4.0f;
+        weaponBar.setScale(weaponScale, weaponScale);
+
+        float weaponX = 740;
+        float weaponY = 715;
+        weaponBar.setPosition(weaponX, weaponY);
+        window.draw(weaponBar);
+
+        // 8. Inventory BAR
+        float invScale = 4.0f;
+        invBar.setScale(invScale, invScale);
+
+        float invX = 950;
+        float invY = 690;
+        invBar.setPosition(invX, invY);
+        window.draw(invBar);
 
         window.display();
     }
