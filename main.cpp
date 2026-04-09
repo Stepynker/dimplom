@@ -1,32 +1,25 @@
 #include <SFML/Graphics.hpp>
 #include <iostream>
 #include <vector>
-
-// Функция для рисования текстуры
-void drawTiledTexture(sf::RenderWindow& window, const sf::Texture& texture, sf::FloatRect area) {
-    sf::Sprite sprite(texture);
-    for (float x = area.left; x < area.left + area.width; x += texture.getSize().x) {
-        for (float y = area.top; y < area.top + area.height; y += texture.getSize().y) {
-            sprite.setPosition(x, y);
-            window.draw(sprite);
-        }
-    }
-}
+#include "Portal.h"
+#include "Plain.h"
+#include <string>
 
 int main()
 {
-    //ОКНО НА ВЕСЬ ЭКРАН 
+    // ОКНО НА ВЕСЬ ЭКРАН 
     sf::RenderWindow window(sf::VideoMode::getFullscreenModes()[0], "My Pixel RPG", sf::Style::Fullscreen);
     window.setFramerateLimit(60);
 
-    const int WORLD_WIDTH = 2000;
-    const int WORLD_HEIGHT = 2000;
+    // РАЗМЕР МИРА
+    const int WORLD_WIDTH = 1024;
+    const int WORLD_HEIGHT = 1024;
 
-    //  ЗАГРУЗКА ГЕРОЯ 
+    // === ЗАГРУЗКА ГЕРОЯ ===
     std::vector<sf::Texture> texturesDown(4);
     std::vector<sf::Texture> texturesUp(4);
     std::vector<sf::Texture> texturesLeft(4);
-    std::vector<sf::Texture> texturesRight(4); 
+    std::vector<sf::Texture> texturesRight(4);
 
     for (int i = 1; i <= 4; i++) {
         texturesDown[i - 1].loadFromFile("hero_down_" + std::to_string(i) + ".png");
@@ -34,14 +27,16 @@ int main()
         texturesLeft[i - 1].loadFromFile("hero_left_" + std::to_string(i) + ".png");
         texturesRight[i - 1].loadFromFile("hero_right_" + std::to_string(i) + ".png");
 
-        // ПИКСЕЛЬ-АРТ
         texturesDown[i - 1].setSmooth(false);
         texturesUp[i - 1].setSmooth(false);
         texturesLeft[i - 1].setSmooth(false);
         texturesRight[i - 1].setSmooth(false);
     }
 
-    //  ТЕКСТУРЫ АТАКИ
+    // === ПОРТАЛ ===
+    Portal portal(480, 64);
+
+    // === ТЕКСТУРЫ АТАКИ ===
     std::vector<sf::Texture> atkDown(2), atkUp(2), atkLeft(2), atkRight(2);
     for (int i = 1; i <= 2; i++) {
         atkDown[i - 1].loadFromFile("atk_down_" + std::to_string(i) + ".png");
@@ -49,84 +44,71 @@ int main()
         atkLeft[i - 1].loadFromFile("atk_left_" + std::to_string(i) + ".png");
         atkRight[i - 1].loadFromFile("atk_right_" + std::to_string(i) + ".png");
 
-        atkDown[i - 1].setSmooth(false); atkUp[i - 1].setSmooth(false);
-        atkLeft[i - 1].setSmooth(false); atkRight[i - 1].setSmooth(false);
+        atkDown[i - 1].setSmooth(false);
+        atkUp[i - 1].setSmooth(false);
+        atkLeft[i - 1].setSmooth(false);
+        atkRight[i - 1].setSmooth(false);
     }
 
-    // ОКРУЖЕНИЕ
-    sf::Texture texFloor;
-    texFloor.loadFromFile("floor.png");
-    texFloor.setSmooth(false);
+    // === КАРТА МИРА (1024x1024) ===
+    sf::Texture mapTexture;
+    mapTexture.loadFromFile("map.png");
+    mapTexture.setSmooth(false);
+    sf::Sprite mapSprite(mapTexture);
+    mapSprite.setPosition(0, 0);
 
-    sf::Texture texWall;
-    texWall.loadFromFile("wall.png");
-    texWall.setSmooth(false);
+    // === ОБЪЕКТЫ ДЛЯ КОЛЛИЗИИ (стены и препятствия) ===
+    std::vector<sf::RectangleShape> obstacles;
+    float wallThickness = 45;
 
-    //  HUD (ИНТЕРФЕЙС)
+    sf::RectangleShape borderTop(sf::Vector2f(WORLD_WIDTH, wallThickness)); borderTop.setPosition(0, 0); borderTop.setFillColor(sf::Color::Transparent); obstacles.push_back(borderTop);
+    sf::RectangleShape borderBottom(sf::Vector2f(WORLD_WIDTH, wallThickness)); borderBottom.setPosition(0, WORLD_HEIGHT - wallThickness); borderBottom.setFillColor(sf::Color::Transparent); obstacles.push_back(borderBottom);
+    sf::RectangleShape borderLeft(sf::Vector2f(wallThickness, WORLD_HEIGHT)); borderLeft.setPosition(0, 0); borderLeft.setFillColor(sf::Color::Transparent); obstacles.push_back(borderLeft);
+    sf::RectangleShape borderRight(sf::Vector2f(wallThickness, WORLD_HEIGHT)); borderRight.setPosition(WORLD_WIDTH - wallThickness, 0); borderRight.setFillColor(sf::Color::Transparent); obstacles.push_back(borderRight);
+
+    // === УПРАВЛЕНИЕ ЛОКАЦИЯМИ (ОБЪЯВЛЯЕМ ПЕРЕД checkCollision!) ===
+    PlainLocation plainLoc;
+    plainLoc.load();
+
+    // Указатель на текущие коллизии
+    std::vector<sf::RectangleShape>* currentCollisions = &obstacles;
+    int currentLocationID = 0;
+
+    // === МИНИ-КАРТА ===
+    sf::Texture minimapFrameTexture;
+    minimapFrameTexture.loadFromFile("minimap_frame.png");
+    sf::Sprite minimapFrameSprite(minimapFrameTexture);
+
+    sf::Texture minimapWorldTexture;
+    minimapWorldTexture.loadFromFile("minimap_map.png");
+    sf::Sprite minimapWorldSprite(minimapWorldTexture);
+
+    sf::RectangleShape playerDot(sf::Vector2f(4, 4));
+    playerDot.setFillColor(sf::Color(255, 0, 0));
+
+    sf::RectangleShape portalDotTemp(sf::Vector2f(4, 4));
+    portalDotTemp.setFillColor(sf::Color(0, 255, 0));
+
+    // === HUD ===
     sf::Texture texHudBg;
-    texHudBg.loadFromFile("hud_bg.png");
-    texHudBg.setSmooth(false);
-    sf::Sprite hudBg(texHudBg);
+    texHudBg.loadFromFile("hud_bg.png"); texHudBg.setSmooth(false); sf::Sprite hudBg(texHudBg);
+    sf::Texture texHp; texHp.loadFromFile("hp_bar.png"); texHp.setSmooth(false); sf::Sprite hpBar(texHp);
+    sf::Texture texMp; texMp.loadFromFile("mp_bar.png"); texMp.setSmooth(false); sf::Sprite mpBar(texMp);
+    sf::Texture texXp; texXp.loadFromFile("xp_bar.png"); texXp.setSmooth(false); sf::Sprite xpBar(texXp);
+    sf::Texture texWeapon; texWeapon.loadFromFile("weapon_bar.png"); texWeapon.setSmooth(false); sf::Sprite weaponBar(texWeapon);
+    sf::Texture texInv; texInv.loadFromFile("inv_bar.png"); texInv.setSmooth(false); sf::Sprite invBar(texInv);
 
-    sf::Texture texHp;
-    texHp.loadFromFile("hp_bar.png");
-    texHp.setSmooth(false);
-    sf::Sprite hpBar(texHp);
-
-    sf::Texture texMp;
-    texMp.loadFromFile("mp_bar.png");
-    texMp.setSmooth(false);
-    sf::Sprite mpBar(texMp);
-
-    sf::Texture texXp;
-    texXp.loadFromFile("xp_bar.png");
-    texXp.setSmooth(false);
-    sf::Sprite xpBar(texXp);
-
-    sf::Texture texWeapon;
-    texWeapon.loadFromFile("weapon_bar.png");
-    texWeapon.setSmooth(false);
-    sf::Sprite weaponBar(texWeapon);
-
-    sf::Texture texInv;
-    texInv.loadFromFile("inv_bar.png");
-    texInv.setSmooth(false);
-    sf::Sprite invBar(texInv);
-
-    //  ГЕРОЙ
+    // === ГЕРОЙ ===
     sf::Sprite hero(texturesDown[0]);
-    hero.setPosition(100, 100);
+    hero.setPosition(512, 512);
     hero.setScale(2.f, 2.f);
 
-    //  КАМЕРА
+    // === КАМЕРА ===
     sf::View camera;
     camera.setSize(1280, 720);
+    camera.setCenter(512, 512);
 
-    // Центрируем камеру на СЕРЕДИНЕ героя
-    sf::FloatRect heroBounds = hero.getGlobalBounds();
-    camera.setCenter(
-        heroBounds.left + heroBounds.width / 2.f,
-        heroBounds.top + heroBounds.height / 2.f
-    );
-
-    // Центрируем камеру на середине этих границ
-    camera.setCenter(
-        heroBounds.left + heroBounds.width / 2.f,
-        heroBounds.top + heroBounds.height / 2.f
-    );
-
-    //  СТЕНЫ 
-    std::vector<sf::RectangleShape> walls;
-    float wallThickness = 64;
-
-    sf::RectangleShape wall1(sf::Vector2f(WORLD_WIDTH, wallThickness)); wall1.setPosition(0, 0); walls.push_back(wall1);
-    sf::RectangleShape wall2(sf::Vector2f(WORLD_WIDTH, wallThickness)); wall2.setPosition(0, WORLD_HEIGHT - wallThickness); walls.push_back(wall2);
-    sf::RectangleShape wall3(sf::Vector2f(wallThickness, WORLD_HEIGHT)); wall3.setPosition(0, 0); walls.push_back(wall3);
-    sf::RectangleShape wall4(sf::Vector2f(wallThickness, WORLD_HEIGHT)); wall4.setPosition(WORLD_WIDTH - wallThickness, 0); walls.push_back(wall4);
-
-    for (auto& w : walls) w.setFillColor(sf::Color::Transparent);
-
-    //  ПЕРЕМЕННЫЕ 
+    // === ПЕРЕМЕННЫЕ ===
     int currentFrame = 0;
     float animationSpeed = 0.15f;
     float animationTimer = 0.f;
@@ -135,15 +117,16 @@ int main()
     float speed = 250.0f;
     sf::Clock clock;
 
-    // Переменные для атаки
     bool isAttacking = false;
     int attackFrame = 0;
     float attackTimer = 0.f;
-    const float ATTACK_SPEED = 0.2f; // Скорость анимации атаки
+    const float ATTACK_SPEED = 0.2f;
 
+    // === ФУНКЦИЯ ПРОВЕРКИ КОЛЛИЗИЙ (ТЕПЕРЬ currentCollisions УЖЕ ОБЪЯВЛЕН!) ===
     auto checkCollision = [&](sf::FloatRect heroRect) -> bool {
-        for (auto& wall : walls) {
-            if (heroRect.intersects(wall.getGlobalBounds())) return true;
+        for (auto& obstacle : *currentCollisions) {
+            if (heroRect.intersects(obstacle.getGlobalBounds()))
+                return true;
         }
         return false;
         };
@@ -153,10 +136,30 @@ int main()
         sf::Event event;
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed) window.close();
-            if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape) window.close();
+            if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape)
+                window.close();
         }
 
         float deltaTime = clock.restart().asSeconds();
+        sf::Vector2u winSize = window.getSize();
+
+        // === ТЕЛЕПОРТАЦИЯ ===
+        if (portal.isPlayerInside(hero.getGlobalBounds())) {
+            if (currentLocationID == 0) {
+                currentLocationID = 1;
+                currentCollisions = &plainLoc.getObstacles();
+                hero.setPosition(plainLoc.getSpawnPos());
+                std::cout << "Teleport to Plain!" << std::endl;
+            }
+            else {
+                currentLocationID = 0;
+                currentCollisions = &obstacles;
+                hero.setPosition(512, 512);
+                std::cout << "Teleport to Castle!" << std::endl;
+            }
+            portal.resetTrigger();
+        }
+
         sf::Vector2f movement(0.f, 0.f);
         isMoving = false;
 
@@ -171,30 +174,25 @@ int main()
             movement.y /= length;
         }
 
-        //  ОБРАБОТКА МЫШИ (НАПРАВЛЕНИЕ АТАКИ) 
+        portal.update(deltaTime);
+
+        // === ОБРАБОТКА МЫШИ ===
         sf::Vector2i mousePixel = sf::Mouse::getPosition(window);
         sf::Vector2f mouseWorld = window.mapPixelToCoords(mousePixel, camera);
-
-        // Вектор от героя к мыши
         sf::Vector2f toMouse = mouseWorld - hero.getPosition();
         float dx = toMouse.x;
         float dy = toMouse.y;
 
-        // Определяем направление по мыши
         if (std::abs(dx) > std::abs(dy)) {
-            // Горизонтальное направление
-            if (dx > 0) currentDirection = 3; // Вправо
-            else currentDirection = 2;        // Влево
+            if (dx > 0) currentDirection = 3;
+            else currentDirection = 2;
         }
         else {
-            // Вертикальное направление
-            if (dy > 0) currentDirection = 0; // Вниз
-            else currentDirection = 1;        // Вверх
+            if (dy > 0) currentDirection = 0;
+            else currentDirection = 1;
         }
 
-        //ОБРАБОТКА ЛКМ (АТАКА) 
         bool lmbPressed = sf::Mouse::isButtonPressed(sf::Mouse::Left);
-
         if (lmbPressed && !isAttacking) {
             isAttacking = true;
             attackFrame = 0;
@@ -204,7 +202,7 @@ int main()
             isAttacking = false;
         }
 
-        //  ДВИЖЕНИЕ И КОЛЛИЗИЯ
+        // === ДВИЖЕНИЕ ===
         if (isMoving) {
             sf::Vector2f oldPos = hero.getPosition();
             hero.move(movement.x * speed * deltaTime, 0);
@@ -222,14 +220,11 @@ int main()
 
         // === АНИМАЦИЯ ===
         if (isAttacking) {
-            // Анимация атаки (2 кадра)
             attackTimer += deltaTime;
             if (attackTimer >= ATTACK_SPEED) {
                 attackFrame = (attackFrame + 1) % 2;
                 attackTimer = 0.f;
             }
-
-            // Применяем анимацию атаки в направлении МЫШИ
             switch (currentDirection) {
             case 0: hero.setTexture(atkDown[attackFrame]); break;
             case 1: hero.setTexture(atkUp[attackFrame]); break;
@@ -238,7 +233,6 @@ int main()
             }
         }
         else if (isMoving) {
-            // Анимация ходьбы
             animationTimer += deltaTime;
             if (animationTimer >= animationSpeed) {
                 currentFrame = (currentFrame + 1) % 4;
@@ -252,7 +246,6 @@ int main()
             }
         }
         else {
-            // Стоит на месте (1-й кадр)
             switch (currentDirection) {
             case 0: hero.setTexture(texturesDown[0]); break;
             case 1: hero.setTexture(texturesUp[0]); break;
@@ -263,92 +256,70 @@ int main()
 
         camera.setCenter(hero.getPosition());
 
-        //  ОТРИСОВКА МИРА 
+        // === ОТРИСОВКА ===
         window.clear(sf::Color(20, 20, 20));
         window.setView(camera);
 
-        // ПОЛ
-        const int DRAW_STEP = 64;
-        int startX = (int)(camera.getCenter().x / DRAW_STEP) * DRAW_STEP - 800;
-        int startY = (int)(camera.getCenter().y / DRAW_STEP) * DRAW_STEP - 600;
-
-        sf::Sprite tileFloor(texFloor);
-        tileFloor.setScale(2.0f, 2.0f);
-
-        for (int x = startX; x < startX + 1700; x += DRAW_STEP) {
-            for (int y = startY; y < startY + 1300; y += DRAW_STEP) {
-                tileFloor.setPosition((float)x, (float)y);
-                window.draw(tileFloor);
-            }
+        if (currentLocationID == 0) {
+            window.draw(mapSprite);
         }
-
-        // СТЕНЫ
-        for (auto& wall : walls) drawTiledTexture(window, texWall, wall.getGlobalBounds());
-
-        // ГЕРОЙ
+        else {
+            plainLoc.draw(window);
+        }
+        portal.draw(window);
         window.draw(hero);
 
-        // HUD 
-
+        // === HUD ===
         window.setView(window.getDefaultView());
-        sf::Vector2u winSize = window.getSize();
 
-        // 1. Фон HUD
         float hudScale = 6.0f;
         hudBg.setScale(hudScale, hudScale);
-
-        // 2. Размеры фона
         float bgWidth = hudBg.getGlobalBounds().width;
         float bgHeight = hudBg.getGlobalBounds().height;
-
-        // 3. Позиция фона
         hudBg.setPosition((winSize.x - bgWidth) / 2.f, winSize.y - bgHeight - 50);
         window.draw(hudBg);
 
-        // 4. HP BAR
-        float hpScale = 4.0f;
-        hpBar.setScale(hpScale, hpScale);
+        hpBar.setScale(4.0f, 4.0f); hpBar.setPosition(500, 650); window.draw(hpBar);
+        mpBar.setScale(4.0f, 4.0f); mpBar.setPosition(500, 710); window.draw(mpBar);
+        xpBar.setScale(4.0f, 4.0f); xpBar.setPosition(495, 760); window.draw(xpBar);
+        weaponBar.setScale(4.0f, 4.0f); weaponBar.setPosition(740, 715); window.draw(weaponBar);
+        invBar.setScale(4.0f, 4.0f); invBar.setPosition(950, 690); window.draw(invBar);
 
-        float hpX = 500; 
-        float hpY = 650;   
-        hpBar.setPosition(hpX, hpY);
-        window.draw(hpBar);
+        // === МИНИ-КАРТА ===
+        float minimapUI_W = 200;
+        float minimapUI_H = 200;
+        float paddingX = 20;
+        float paddingY = 20;
+        float uiPosX = winSize.x - minimapUI_W - paddingX;
+        float uiPosY = paddingY;
 
-        // 5. MP BAR
-        float mpScale = 4.0f;
-        mpBar.setScale(mpScale, mpScale);
+        minimapFrameSprite.setPosition(uiPosX, uiPosY);
+        minimapFrameSprite.setScale(minimapUI_W / minimapFrameTexture.getSize().x,
+            minimapUI_H / minimapFrameTexture.getSize().y);
+        window.draw(minimapFrameSprite);
 
-        float mpX = 500;
-        float mpY = 710;   
-        mpBar.setPosition(mpX, mpY);
-        window.draw(mpBar);
+        float mapInnerX = uiPosX + 20;
+        float mapInnerY = uiPosY + 20;
+        float mapInnerSize = minimapUI_W - 40;
 
-       // 6. XP BAR
-        float xpScale = 4.0f;
-        xpBar.setScale(xpScale, xpScale);
+        minimapWorldSprite.setPosition(mapInnerX, mapInnerY);
+        minimapWorldSprite.setScale(mapInnerSize / minimapWorldTexture.getSize().x,
+            mapInnerSize / minimapWorldTexture.getSize().y);
+        window.draw(minimapWorldSprite);
 
-        float xpX = 495;
-        float xpY = 760;
-        xpBar.setPosition(xpX, xpY);
-        window.draw(xpBar);
+        float heroRatioX = hero.getPosition().x / WORLD_WIDTH;
+        float heroRatioY = hero.getPosition().y / WORLD_HEIGHT;
+        float dotX = mapInnerX + (heroRatioX * mapInnerSize);
+        float dotY = mapInnerY + (heroRatioY * mapInnerSize);
+        playerDot.setPosition(dotX - 2, dotY - 2);
+        window.draw(playerDot);
 
-        // 7. Weapon BAR
-        float weaponScale = 4.0f;
-        weaponBar.setScale(weaponScale, weaponScale);
-
-        float weaponX = 740;
-        float weaponY = 715;
-        weaponBar.setPosition(weaponX, weaponY);
-        window.draw(weaponBar);
-
-        // 8. Inventory BAR
-        float invScale = 4.0f;
-        invBar.setScale(invScale, invScale);
-
-        float invX = 950;
-        float invY = 690;
-        invBar.setPosition(invX, invY);
-        window.draw(invBar);
+        float portalRatioX = 480.0f / WORLD_WIDTH;
+        float portalRatioY = 64.0f / WORLD_HEIGHT;
+        float portalDotX = mapInnerX + (portalRatioX * mapInnerSize);
+        float portalDotY = mapInnerY + (portalRatioY * mapInnerSize);
+        portalDotTemp.setPosition(portalDotX - 2, portalDotY - 2);
+        window.draw(portalDotTemp);
 
         window.display();
     }
