@@ -33,8 +33,13 @@ int main()
         texturesRight[i - 1].setSmooth(false);
     }
 
+    // === ПАРАМЕТРЫ ДЭША ===
+    const float DASH_SPEED = 800.f;
+    const float DASH_DURATION = 0.15f;
+    const float DASH_COOLDOWN = 2.0f;
+
     // === ПОРТАЛ ===
-    Portal portal(480, 64);
+    Portal portal(900, 64);
 
     // === ТЕКСТУРЫ АТАКИ ===
     std::vector<sf::Texture> atkDown(2), atkUp(2), atkLeft(2), atkRight(2);
@@ -50,14 +55,20 @@ int main()
         atkRight[i - 1].setSmooth(false);
     }
 
-    // === КАРТА МИРА (1024x1024) ===
+    // === ПЕРЕМЕННЫЕ ДЭША ===
+    bool isDashing = false;
+    float dashTimer = 0.f;
+    float dashCooldown = 0.f;
+    sf::Vector2f dashDirection(0.f, 0.f);
+
+    // === КАРТА МИРА ===
     sf::Texture mapTexture;
     mapTexture.loadFromFile("map.png");
     mapTexture.setSmooth(false);
     sf::Sprite mapSprite(mapTexture);
     mapSprite.setPosition(0, 0);
 
-    // === ОБЪЕКТЫ ДЛЯ КОЛЛИЗИИ (стены и препятствия) ===
+    // === ОБЪЕКТЫ ДЛЯ КОЛЛИЗИИ ===
     std::vector<sf::RectangleShape> obstacles;
     float wallThickness = 45;
 
@@ -66,12 +77,11 @@ int main()
     sf::RectangleShape borderLeft(sf::Vector2f(wallThickness, WORLD_HEIGHT)); borderLeft.setPosition(0, 0); borderLeft.setFillColor(sf::Color::Transparent); obstacles.push_back(borderLeft);
     sf::RectangleShape borderRight(sf::Vector2f(wallThickness, WORLD_HEIGHT)); borderRight.setPosition(WORLD_WIDTH - wallThickness, 0); borderRight.setFillColor(sf::Color::Transparent); obstacles.push_back(borderRight);
 
-    // === УПРАВЛЕНИЕ ЛОКАЦИЯМИ (ОБЪЯВЛЯЕМ ПЕРЕД checkCollision!) ===
+    // === УПРАВЛЕНИЕ ЛОКАЦИЯМИ ===
     PlainLocation plainLoc;
     plainLoc.load();
 
-    // Указатель на текущие коллизии
-    std::vector<sf::RectangleShape>* currentCollisions = &obstacles;
+    const std::vector<sf::RectangleShape>* currentCollisions = &obstacles;
     int currentLocationID = 0;
 
     // === МИНИ-КАРТА ===
@@ -122,7 +132,7 @@ int main()
     float attackTimer = 0.f;
     const float ATTACK_SPEED = 0.2f;
 
-    // === ФУНКЦИЯ ПРОВЕРКИ КОЛЛИЗИЙ (ТЕПЕРЬ currentCollisions УЖЕ ОБЪЯВЛЕН!) ===
+    // === ФУНКЦИЯ ПРОВЕРКИ КОЛЛИЗИЙ ===
     auto checkCollision = [&](sf::FloatRect heroRect) -> bool {
         for (auto& obstacle : *currentCollisions) {
             if (heroRect.intersects(obstacle.getGlobalBounds()))
@@ -155,11 +165,12 @@ int main()
                 currentLocationID = 0;
                 currentCollisions = &obstacles;
                 hero.setPosition(512, 512);
-                std::cout << "Teleport to Castle!" << std::endl;
+                std::cout << "Teleport to Cave!" << std::endl;
             }
             portal.resetTrigger();
         }
 
+        // === ВВОД ДВИЖЕНИЯ ===
         sf::Vector2f movement(0.f, 0.f);
         isMoving = false;
 
@@ -176,7 +187,7 @@ int main()
 
         portal.update(deltaTime);
 
-        // === ОБРАБОТКА МЫШИ ===
+        // === ОБРАБОТКА МЫШИ (НАПРАВЛЕНИЕ) ===
         sf::Vector2i mousePixel = sf::Mouse::getPosition(window);
         sf::Vector2f mouseWorld = window.mapPixelToCoords(mousePixel, camera);
         sf::Vector2f toMouse = mouseWorld - hero.getPosition();
@@ -192,6 +203,7 @@ int main()
             else currentDirection = 1;
         }
 
+        // === ОБРАБОТКА ЛКМ (АТАКА) ===
         bool lmbPressed = sf::Mouse::isButtonPressed(sf::Mouse::Left);
         if (lmbPressed && !isAttacking) {
             isAttacking = true;
@@ -202,20 +214,92 @@ int main()
             isAttacking = false;
         }
 
-        // === ДВИЖЕНИЕ ===
-        if (isMoving) {
+        // === ОБРАБОТКА ПРОБЕЛА (ДЭШ) ===
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space) && !isDashing && dashCooldown <= 0.f) {
+            sf::Vector2f dir(0.f, 0.f);
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::W)) dir.y -= 1.f;
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::S)) dir.y += 1.f;
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::A)) dir.x -= 1.f;
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::D)) dir.x += 1.f;
+
+            float len = std::sqrt(dir.x * dir.x + dir.y * dir.y);
+            if (len > 0.f) {
+                dir /= len;
+                isDashing = true;
+                dashTimer = DASH_DURATION;
+                dashDirection = dir;
+                dashCooldown = DASH_COOLDOWN;
+            }
+        }
+
+        // === ОБНОВЛЕНИЕ ТАЙМЕРОВ ДЭША ===
+        if (dashCooldown > 0.f) dashCooldown -= deltaTime;
+        if (isDashing) {
+            dashTimer -= deltaTime;
+            if (dashTimer <= 0.f) {
+                isDashing = false;
+            }
+        }
+
+        // === ДВИЖЕНИЕ И КОЛЛИЗИЯ ===
+        if (isDashing) {
+            // ДЭШ: быстрое движение с коллизиями
+            sf::Vector2f oldPos = hero.getPosition();
+
+            // Двигаем героя
+            hero.move(dashDirection * DASH_SPEED * deltaTime);
+
+            // Проверяем коллизии - если врезались, отменяем движение
+            if (checkCollision(hero.getGlobalBounds())) {
+                hero.setPosition(oldPos);  // Возвращаем к стене
+            }
+
+            // Границы мира (чтобы не улететь за карту)
+            sf::FloatRect bounds = hero.getGlobalBounds();
+            if (bounds.left < 0) hero.setPosition(0, hero.getPosition().y);
+            if (bounds.top < 0) hero.setPosition(hero.getPosition().x, 0);
+            if (bounds.left + bounds.width > WORLD_WIDTH)
+                hero.setPosition(WORLD_WIDTH - bounds.width, hero.getPosition().y);
+            if (bounds.top + bounds.height > WORLD_HEIGHT)
+                hero.setPosition(hero.getPosition().x, WORLD_HEIGHT - bounds.height);
+        }
+        else if (isMoving) {
+            //  Обычное движение с коллизиями
             sf::Vector2f oldPos = hero.getPosition();
             hero.move(movement.x * speed * deltaTime, 0);
             if (checkCollision(hero.getGlobalBounds())) hero.setPosition(oldPos);
+
             oldPos = hero.getPosition();
             hero.move(0, movement.y * speed * deltaTime);
             if (checkCollision(hero.getGlobalBounds())) hero.setPosition(oldPos);
 
+            // Границы мира
             sf::FloatRect bounds = hero.getGlobalBounds();
             if (bounds.left < 0) hero.setPosition(0, hero.getPosition().y);
             if (bounds.top < 0) hero.setPosition(hero.getPosition().x, 0);
-            if (bounds.left + bounds.width > WORLD_WIDTH) hero.setPosition(WORLD_WIDTH - bounds.width, hero.getPosition().y);
-            if (bounds.top + bounds.height > WORLD_HEIGHT) hero.setPosition(hero.getPosition().x, WORLD_HEIGHT - bounds.height);
+            if (bounds.left + bounds.width > WORLD_WIDTH)
+                hero.setPosition(WORLD_WIDTH - bounds.width, hero.getPosition().y);
+            if (bounds.top + bounds.height > WORLD_HEIGHT)
+                hero.setPosition(hero.getPosition().x, WORLD_HEIGHT - bounds.height);
+        }
+        else if (isMoving) {
+            //  Обычное движение с коллизиями
+            sf::Vector2f oldPos = hero.getPosition();
+            hero.move(movement.x * speed * deltaTime, 0);
+            if (checkCollision(hero.getGlobalBounds())) hero.setPosition(oldPos);
+
+            oldPos = hero.getPosition();
+            hero.move(0, movement.y * speed * deltaTime);
+            if (checkCollision(hero.getGlobalBounds())) hero.setPosition(oldPos);
+
+            // Границы мира
+            sf::FloatRect bounds = hero.getGlobalBounds();
+            if (bounds.left < 0) hero.setPosition(0, hero.getPosition().y);
+            if (bounds.top < 0) hero.setPosition(hero.getPosition().x, 0);
+            if (bounds.left + bounds.width > WORLD_WIDTH)
+                hero.setPosition(WORLD_WIDTH - bounds.width, hero.getPosition().y);
+            if (bounds.top + bounds.height > WORLD_HEIGHT)
+                hero.setPosition(hero.getPosition().x, WORLD_HEIGHT - bounds.height);
         }
 
         // === АНИМАЦИЯ ===
@@ -231,6 +315,8 @@ int main()
             case 2: hero.setTexture(atkLeft[attackFrame]); break;
             case 3: hero.setTexture(atkRight[attackFrame]); break;
             }
+        }
+        else if (isDashing) {
         }
         else if (isMoving) {
             animationTimer += deltaTime;
@@ -314,7 +400,7 @@ int main()
         playerDot.setPosition(dotX - 2, dotY - 2);
         window.draw(playerDot);
 
-        float portalRatioX = 480.0f / WORLD_WIDTH;
+        float portalRatioX = 850.0f / WORLD_WIDTH;
         float portalRatioY = 64.0f / WORLD_HEIGHT;
         float portalDotX = mapInnerX + (portalRatioX * mapInnerSize);
         float portalDotY = mapInnerY + (portalRatioY * mapInnerSize);
