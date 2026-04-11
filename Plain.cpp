@@ -19,9 +19,16 @@ bool PlainLocation::load() {
     sf::RectangleShape left(sf::Vector2f(wallThickness, 1024)); left.setPosition(0, 0); left.setFillColor(sf::Color::Transparent); obstacles.push_back(left);
     sf::RectangleShape right(sf::Vector2f(wallThickness, 1024)); right.setPosition(1024 - wallThickness, 0); right.setFillColor(sf::Color::Transparent); obstacles.push_back(right);
 
+    // === СПАВНИМ ВРАГОВ (6-7 штук) ===
+    enemyManager.spawnRandomEnemies(7);
+    std::cout << "Spawned " << 7 << " enemies on Plain!" << std::endl;
+
     return true;
 }
 
 void PlainLocation::draw(sf::RenderWindow& window) {
     window.draw(mapSprite);
+
+    // Рисуем всех врагов
+    enemyManager.drawAll(window);
 }
