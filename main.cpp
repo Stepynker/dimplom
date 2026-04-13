@@ -60,7 +60,7 @@ int main()
     float dashTimer = 0.f;
     float dashCooldown = 0.f;
     sf::Vector2f dashDirection(0.f, 0.f);
-
+    const float WALK_SPEED_MODIFIER = 0.5f;
     // === КАРТА МИРА ===
     sf::Texture mapTexture;
     mapTexture.loadFromFile("map.png");
@@ -242,37 +242,20 @@ int main()
         }
 
         // === ДВИЖЕНИЕ И КОЛЛИЗИЯ ===
+        // Вычисляем текущую скорость (учитываем Shift)
+        float currentSpeed = speed;
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::LShift) || sf::Keyboard::isKeyPressed(sf::Keyboard::RShift)) {
+            currentSpeed *= WALK_SPEED_MODIFIER;  // Замедляемся
+        }
+
         if (isDashing) {
             // ДЭШ: быстрое движение с коллизиями
             sf::Vector2f oldPos = hero.getPosition();
-
-            // Двигаем героя
             hero.move(dashDirection * DASH_SPEED * deltaTime);
-
-            // Проверяем коллизии - если врезались, отменяем движение
             if (checkCollision(hero.getGlobalBounds())) {
-                hero.setPosition(oldPos);  // Возвращаем к стене
+                hero.setPosition(oldPos);
+                hero.move(-dashDirection * 5.f);  // лёгкий отскок от стены
             }
-
-            // Границы мира (чтобы не улететь за карту)
-            sf::FloatRect bounds = hero.getGlobalBounds();
-            if (bounds.left < 0) hero.setPosition(0, hero.getPosition().y);
-            if (bounds.top < 0) hero.setPosition(hero.getPosition().x, 0);
-            if (bounds.left + bounds.width > WORLD_WIDTH)
-                hero.setPosition(WORLD_WIDTH - bounds.width, hero.getPosition().y);
-            if (bounds.top + bounds.height > WORLD_HEIGHT)
-                hero.setPosition(hero.getPosition().x, WORLD_HEIGHT - bounds.height);
-        }
-        else if (isMoving) {
-            //  Обычное движение с коллизиями
-            sf::Vector2f oldPos = hero.getPosition();
-            hero.move(movement.x * speed * deltaTime, 0);
-            if (checkCollision(hero.getGlobalBounds())) hero.setPosition(oldPos);
-
-            oldPos = hero.getPosition();
-            hero.move(0, movement.y * speed * deltaTime);
-            if (checkCollision(hero.getGlobalBounds())) hero.setPosition(oldPos);
-
             // Границы мира
             sf::FloatRect bounds = hero.getGlobalBounds();
             if (bounds.left < 0) hero.setPosition(0, hero.getPosition().y);
@@ -283,13 +266,13 @@ int main()
                 hero.setPosition(hero.getPosition().x, WORLD_HEIGHT - bounds.height);
         }
         else if (isMoving) {
-            //  Обычное движение с коллизиями
+            // Обычное движение с коллизиями (с учётом currentSpeed)
             sf::Vector2f oldPos = hero.getPosition();
-            hero.move(movement.x * speed * deltaTime, 0);
+            hero.move(movement.x * currentSpeed * deltaTime, 0);
             if (checkCollision(hero.getGlobalBounds())) hero.setPosition(oldPos);
 
             oldPos = hero.getPosition();
-            hero.move(0, movement.y * speed * deltaTime);
+            hero.move(0, movement.y * currentSpeed * deltaTime);
             if (checkCollision(hero.getGlobalBounds())) hero.setPosition(oldPos);
 
             // Границы мира
