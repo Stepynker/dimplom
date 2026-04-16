@@ -3,6 +3,8 @@
 #include <vector>
 #include "Portal.h"
 #include "Plain.h"
+#include "Inventory.h"
+#include "Arrow.h"
 #include <string>
 
 int main()
@@ -10,6 +12,10 @@ int main()
     // ОКНО НА ВЕСЬ ЭКРАН 
     sf::RenderWindow window(sf::VideoMode::getFullscreenModes()[0], "My Pixel RPG", sf::Style::Fullscreen);
     window.setFramerateLimit(60);
+
+    // === ПРОВЕРКА РАЗРЕШЕНИЯ ===
+    sf::Vector2u resolution = window.getSize();
+    std::cout << "Screen resolution: " << resolution.x << "x" << resolution.y << std::endl;
 
     // РАЗМЕР МИРА
     const int WORLD_WIDTH = 1024;
@@ -32,6 +38,13 @@ int main()
         texturesLeft[i - 1].setSmooth(false);
         texturesRight[i - 1].setSmooth(false);
     }
+
+    // === ИНВЕНТАРЬ ===
+    Inventory inventory;
+    inventory.init();
+
+    // === СТРЕЛА ===
+    Arrow arrow;
 
     // === ПАРАМЕТРЫ ДЭША ===
     const float DASH_SPEED = 800.f;
@@ -89,10 +102,14 @@ int main()
     minimapFrameTexture.loadFromFile("minimap_frame.png");
     sf::Sprite minimapFrameSprite(minimapFrameTexture);
 
-    sf::Texture minimapWorldTexture;
-    minimapWorldTexture.loadFromFile("minimap_map.png");
-    sf::Sprite minimapWorldSprite(minimapWorldTexture);
+    sf::Texture minimapWorldTextureCave;  // <-- Переименовал для ясности
+    minimapWorldTextureCave.loadFromFile("minimap_map.png"); // Твоя старая карта (Cave)
+    sf::Sprite minimapWorldSprite(minimapWorldTextureCave);
 
+    sf::Texture minimapWorldTexturePlain; // <-- Новая текстура для Plain
+    minimapWorldTexturePlain.loadFromFile("minimap_plain.png");
+
+    // Точки
     sf::RectangleShape playerDot(sf::Vector2f(4, 4));
     playerDot.setFillColor(sf::Color(255, 0, 0));
 
@@ -186,34 +203,27 @@ int main()
         }
 
         portal.update(deltaTime);
+        arrow.update(deltaTime);
 
-        // === ОБРАБОТКА МЫШИ (НАПРАВЛЕНИЕ) ===
-        sf::Vector2i mousePixel = sf::Mouse::getPosition(window);
-        sf::Vector2f mouseWorld = window.mapPixelToCoords(mousePixel, camera);
-        sf::Vector2f toMouse = mouseWorld - hero.getPosition();
-        float dx = toMouse.x;
-        float dy = toMouse.y;
-
-        if (std::abs(dx) > std::abs(dy)) {
-            if (dx > 0) currentDirection = 3;
-            else currentDirection = 2;
-        }
-        else {
-            if (dy > 0) currentDirection = 0;
-            else currentDirection = 1;
+        // === ПРОВЕРКА СТОЛКНОВЕНИЙ СТРЕЛЫ С ВРАГАМИ ===
+        if (arrow.isActive() && currentLocationID == 1) { // Только на поляне
+            auto& enemies = plainLoc.getEnemyManager().getEnemies();
+            for (auto& enemy : enemies) {
+                if (arrow.getBounds().intersects(enemy.getBounds())) {
+                    // Попадание! Здесь потом добавим урон врагу
+                    std::cout << "Arrow hit enemy!" << std::endl;
+                    arrow.deactivate();
+                    break;
+                }
+            }
         }
 
-        // === ОБРАБОТКА ЛКМ (АТАКА) ===
-        bool lmbPressed = sf::Mouse::isButtonPressed(sf::Mouse::Left);
-        if (lmbPressed && !isAttacking) {
-            isAttacking = true;
-            attackFrame = 0;
-            attackTimer = 0.f;
-        }
-        if (!lmbPressed) {
-            isAttacking = false;
-        }
 
+        // === ОБНОВЛЕНИЕ ЛОКАЦИИ (ВРАГИ) ===
+        if (currentLocationID == 1) {
+            // Если мы на поляне, обновляем врагов
+            plainLoc.update(deltaTime, hero.getPosition());
+        }
         // === ОБРАБОТКА ПРОБЕЛА (ДЭШ) ===
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space) && !isDashing && dashCooldown <= 0.f) {
             sf::Vector2f dir(0.f, 0.f);
@@ -242,7 +252,7 @@ int main()
         }
 
         // === ДВИЖЕНИЕ И КОЛЛИЗИЯ ===
-        // Вычисляем текущую скорость (учитываем Shift)
+        // Вычисляем текущую скорость
         float currentSpeed = speed;
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::LShift) || sf::Keyboard::isKeyPressed(sf::Keyboard::RShift)) {
             currentSpeed *= WALK_SPEED_MODIFIER;  // Замедляемся
@@ -291,7 +301,13 @@ int main()
             if (attackTimer >= ATTACK_SPEED) {
                 attackFrame = (attackFrame + 1) % 2;
                 attackTimer = 0.f;
+
+                // Сброс атаки после 2 кадров
+                if (attackFrame == 0) {
+                    isAttacking = false;
+                }
             }
+
             switch (currentDirection) {
             case 0: hero.setTexture(atkDown[attackFrame]); break;
             case 1: hero.setTexture(atkUp[attackFrame]); break;
@@ -329,14 +345,18 @@ int main()
         window.clear(sf::Color(20, 20, 20));
         window.setView(camera);
 
+
         if (currentLocationID == 0) {
             window.draw(mapSprite);
         }
         else {
             plainLoc.draw(window);
         }
+
+
         portal.draw(window);
         window.draw(hero);
+        arrow.draw(window);
 
         // === HUD ===
         window.setView(window.getDefaultView());
@@ -354,6 +374,82 @@ int main()
         weaponBar.setScale(4.0f, 4.0f); weaponBar.setPosition(740, 715); window.draw(weaponBar);
         invBar.setScale(4.0f, 4.0f); invBar.setPosition(950, 690); window.draw(invBar);
 
+
+        // === ОБРАБОТКА ЛКМ ===
+        static bool prevLmbState = false;
+        bool currentLmbState = sf::Mouse::isButtonPressed(sf::Mouse::Left);
+        bool lmbPressed = currentLmbState && !prevLmbState;
+        bool lmbReleased = !currentLmbState && prevLmbState;
+        bool lmbHeld = currentLmbState;
+        prevLmbState = currentLmbState;
+
+        sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+        sf::Vector2f mouseWorld = window.mapPixelToCoords(mousePos, camera);
+
+        // === ЗОНА HUD ===
+        float hudX = 600.f;    // Левый край панели
+        float hudY = 850.f;    // Верхний край панели (низ экрана)
+        float hudW = 700.f;   // Ширина панели
+        float hudH = 150.f;    // Высота панели
+
+        sf::FloatRect hudRect(hudX, hudY, hudW, hudH);
+        bool clickedOnHUD = hudRect.contains(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y));
+
+        // === СТРЕЛЬБА ===
+        if (lmbHeld && !clickedOnHUD) {
+            const auto& equipment = inventory.getEquipment();
+            if (equipment[0].type != ITEM_NONE && !arrow.isActive()) {
+                arrow.deactivate();
+                std::cout << "SHOOT!" << std::endl;
+
+                sf::Vector2f heroCenter(
+                    hero.getPosition().x + 16,
+                    hero.getPosition().y + 16
+                );
+
+                sf::Vector2f toMouse = mouseWorld - heroCenter;
+                float len = std::sqrt(toMouse.x * toMouse.x + toMouse.y * toMouse.y);
+                if (len > 0.f) toMouse /= len;
+
+                arrow.shoot(heroCenter, toMouse, equipment[0].damage);
+
+                if (!isAttacking) {
+                    isAttacking = true;
+                    attackFrame = 0;
+                    attackTimer = 0.f;
+                }
+            }
+        }
+
+        if (lmbReleased) {
+            isAttacking = false;
+        }
+
+        // Направление героя
+        sf::Vector2f toMouseDir = mouseWorld - hero.getPosition();
+        float dx = toMouseDir.x;
+        float dy = toMouseDir.y;
+
+        if (std::abs(dx) > std::abs(dy)) {
+            if (dx > 0) currentDirection = 3;
+            else currentDirection = 2;
+        }
+        else {
+            if (dy > 0) currentDirection = 0;
+            else currentDirection = 1;
+        }
+
+        // Инвентарь
+        if (!lmbHeld || clickedOnHUD) {
+            inventory.update(deltaTime, mousePos, lmbPressed, lmbReleased);
+        }
+
+
+
+        // === ОБНОВЛЯЕМ ПОЗИЦИИ ИНВЕНТАРЯ ОТНОСИТЕЛЬНО HUD ===
+        inventory.updatePositions(hudBg); 
+        inventory.draw(window);            // Рисуем предметы
+
         // === МИНИ-КАРТА ===
         float minimapUI_W = 200;
         float minimapUI_H = 200;
@@ -362,20 +458,33 @@ int main()
         float uiPosX = winSize.x - minimapUI_W - paddingX;
         float uiPosY = paddingY;
 
+        // 1. Рисуем РАМКУ
         minimapFrameSprite.setPosition(uiPosX, uiPosY);
         minimapFrameSprite.setScale(minimapUI_W / minimapFrameTexture.getSize().x,
             minimapUI_H / minimapFrameTexture.getSize().y);
         window.draw(minimapFrameSprite);
 
+        // 2. Выбираем нужную карту мира в зависимости от локации
+        if (currentLocationID == 0) {
+            // Локация Cave
+            minimapWorldSprite.setTexture(minimapWorldTextureCave);
+        }
+        else {
+            // Локация Plain
+            minimapWorldSprite.setTexture(minimapWorldTexturePlain);
+        }
+
+        // 3. Рисуем выбранную карту
         float mapInnerX = uiPosX + 20;
         float mapInnerY = uiPosY + 20;
         float mapInnerSize = minimapUI_W - 40;
 
         minimapWorldSprite.setPosition(mapInnerX, mapInnerY);
-        minimapWorldSprite.setScale(mapInnerSize / minimapWorldTexture.getSize().x,
-            mapInnerSize / minimapWorldTexture.getSize().y);
+        minimapWorldSprite.setScale(mapInnerSize / minimapWorldSprite.getTexture()->getSize().x,
+            mapInnerSize / minimapWorldSprite.getTexture()->getSize().y);
         window.draw(minimapWorldSprite);
 
+        // 4. Точка игрока (логика та же, так как WORLD_WIDTH/HEIGHT одинаковы)
         float heroRatioX = hero.getPosition().x / WORLD_WIDTH;
         float heroRatioY = hero.getPosition().y / WORLD_HEIGHT;
         float dotX = mapInnerX + (heroRatioX * mapInnerSize);
@@ -383,13 +492,16 @@ int main()
         playerDot.setPosition(dotX - 2, dotY - 2);
         window.draw(playerDot);
 
-        float portalRatioX = 850.0f / WORLD_WIDTH;
-        float portalRatioY = 64.0f / WORLD_HEIGHT;
-        float portalDotX = mapInnerX + (portalRatioX * mapInnerSize);
-        float portalDotY = mapInnerY + (portalRatioY * mapInnerSize);
-        portalDotTemp.setPosition(portalDotX - 2, portalDotY - 2);
-        window.draw(portalDotTemp);
-
+        // 5. Точка портала (показываем только если мы в той локации, где портал есть)
+        // Портал есть только в Cave (ID 0)
+        if (currentLocationID == 0) {
+            float portalRatioX = 850.0f / WORLD_WIDTH;
+            float portalRatioY = 64.0f / WORLD_HEIGHT;
+            float portalDotX = mapInnerX + (portalRatioX * mapInnerSize);
+            float portalDotY = mapInnerY + (portalRatioY * mapInnerSize);
+            portalDotTemp.setPosition(portalDotX - 2, portalDotY - 2);
+            window.draw(portalDotTemp);
+        }
         window.display();
     }
 
