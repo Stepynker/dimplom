@@ -6,11 +6,11 @@
 class PlainLocation {
 public:
     bool load();
+    void update(float deltaTime, const sf::Vector2f& playerPos); // <-- ДОБАВИТЬ
     void draw(sf::RenderWindow& window);
     const std::vector<sf::RectangleShape>& getObstacles() const { return obstacles; }
     sf::Vector2f getSpawnPos() const { return spawnPos; }
 
-    // Доступ к врагам
     EnemyManager& getEnemyManager() { return enemyManager; }
 
 private:
@@ -19,5 +19,5 @@ private:
     std::vector<sf::RectangleShape> obstacles;
     sf::Vector2f spawnPos = { 512, 900 };
 
-    EnemyManager enemyManager;  // Менеджер врагов
+    EnemyManager enemyManager;
 };
