@@ -2,32 +2,68 @@
 #include <cstdlib>
 #include <ctime>
 #include <iostream>
+#include <cmath> // Для sqrt
 
-// === СТАТИЧЕСКИЕ ПЕРЕМЕННЫЕ (одни на все экземпляры) ===
-sf::Texture Enemy::enemyTexture;
-bool Enemy::textureLoaded = false;
+// === СТАТИЧЕСКИЕ ПЕРЕМЕННЫЕ ===
+sf::Texture Enemy::texIdle;
+sf::Texture Enemy::texJump;
+bool Enemy::texturesLoaded = false;
 
 // === КЛАСС ENEMY ===
-Enemy::Enemy(float x, float y) : position(x, y) {
-    // Загружаем текстуру только один раз для всех врагов
-    if (!textureLoaded) {
-        if (enemyTexture.loadFromFile("Slime_green.png")) {
-            enemyTexture.setSmooth(false);  // Чёткие пиксели
-            textureLoaded = true;
-            std::cout << "Enemy texture loaded!" << std::endl;
+Enemy::Enemy(float x, float y, float speed) : position(x, y), moveSpeed(speed) {
+    // Загружаем текстуры ОДИН раз
+    if (!texturesLoaded) {
+        if (texIdle.loadFromFile("slime_idle.png") && texJump.loadFromFile("slime_jump.png")) {
+            texIdle.setSmooth(false);
+            texJump.setSmooth(false);
+            texturesLoaded = true;
+            std::cout << "Enemy textures loaded!" << std::endl;
         }
         else {
-            std::cout << "ERROR: Could not load Slime_green.png!" << std::endl;
-            // Создаём запасной красный прямоугольник, если картинка не найдена
-            sf::RectangleShape fallback(sf::Vector2f(32.f, 48.f));
-            fallback.setFillColor(sf::Color(180, 50, 50));
+            std::cout << "ERROR: Could not load slime textures! Check filenames." << std::endl;
         }
     }
 
-    // Настраиваем спрайт
-    sprite.setTexture(enemyTexture);
+    sprite.setTexture(texIdle); // Начинаем с кадра покоя
     sprite.setPosition(position);
-    sprite.setScale(1.0f, 1.0f);  // Если нужно увеличить — поставим 2.0f
+    sprite.setScale(1.0f, 1.0f); // Увеличим масштаб, чтобы было видно (подстрой под себя)
+}
+
+void Enemy::update(float deltaTime, const sf::Vector2f& playerPos) {
+    // 1. Вычисляем вектор направления к игроку
+    sf::Vector2f direction = playerPos - position;
+
+    // Длина вектора (расстояние до игрока)
+    float length = std::sqrt(direction.x * direction.x + direction.y * direction.y);
+
+    // Если игрок очень близко, не двигаемся (чтобы не дрожать)
+    if (length > 5.f) {
+        // Нормализуем вектор
+        direction /= length;
+
+        // Двигаем врага
+        position += direction * moveSpeed * deltaTime;
+        sprite.setPosition(position);
+
+        // 2. АНИМАЦИЯ
+        animationTimer += deltaTime;
+        if (animationTimer >= animationSpeed) {
+            // Переключаем кадры: 0 -> 1 -> 0 -> 1...
+            currentFrame = (currentFrame + 1) % 2;
+
+            // Применяем текстуру
+            if (currentFrame == 0) sprite.setTexture(texIdle);
+            else sprite.setTexture(texJump);
+
+            animationTimer = 0.f;
+        }
+    }
+    else {
+        // Если стоим, ставим кадр покоя
+        sprite.setTexture(texIdle);
+        currentFrame = 0;
+        animationTimer = 0.f;
+    }
 }
 
 void Enemy::draw(sf::RenderWindow& window) {
@@ -43,15 +79,22 @@ sf::Vector2f Enemy::getPosition() const {
 }
 
 // === КЛАСС ENEMYMANAGER ===
-void EnemyManager::spawnRandomEnemies(int count) {
+void EnemyManager::spawnRandomEnemies(int count, float enemySpeed) {
     std::srand(static_cast<unsigned int>(std::time(nullptr)));
     enemies.clear();
 
     for (int i = 0; i < count; ++i) {
-        // Случайная позиция с отступом от стен 100px
         float x = 100.f + static_cast<float>(std::rand() % 824);
         float y = 100.f + static_cast<float>(std::rand() % 824);
-        enemies.emplace_back(x, y);
+        // Передаём скорость в конструктор
+        enemies.emplace_back(x, y, enemySpeed);
+    }
+}
+
+// Обновление всех врагов
+void EnemyManager::updateAll(float deltaTime, const sf::Vector2f& playerPos) {
+    for (auto& enemy : enemies) {
+        enemy.update(deltaTime, playerPos);
     }
 }
 
