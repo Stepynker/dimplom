@@ -4,32 +4,42 @@
 
 class Enemy {
 public:
-    // Конструктор теперь принимает скорость
     Enemy(float x, float y, float speed);
-
-    // Обновление логики (вызывать каждый кадр)
     void update(float deltaTime, const sf::Vector2f& playerPos);
-
     void draw(sf::RenderWindow& window);
     sf::FloatRect getBounds() const;
     sf::Vector2f getPosition() const;
 
+    bool takeDamage(int damage);
+    int getCurrentHP() const { return currentHP; }
+    int getMaxHP() const { return maxHP; }
+
+    // === НОВОЕ: Для респавна ===
+    bool isDead() const { return isDeadFlag; }
+    void respawn(float x, float y);
+
 private:
     sf::Sprite sprite;
     sf::Vector2f position;
+    sf::Vector2f originalPos;  // Запоминаем где заспавнился
     float moveSpeed;
 
-    // Анимация
-    int currentFrame = 0;       // 0 - idle, 1 - jump
-    float animationTimer = 0.f;
-    float animationSpeed = 0.3f; // Скорость смены кадров
+    int currentFrame;
+    float animationTimer;
+    float animationSpeed;
 
-    // Текстуры (статические, общие для всех)
     static sf::Texture texIdle;
     static sf::Texture texJump;
     static bool texturesLoaded;
-};
 
+    int maxHP;
+    int currentHP;
+
+    // === НОВОЕ ===
+    bool isDeadFlag;
+    float respawnTimer;
+    float respawnDelay;  // 10 секунд
+};
 class EnemyManager {
 public:
     void spawnRandomEnemies(int count, float enemySpeed);
