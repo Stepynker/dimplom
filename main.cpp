@@ -5,6 +5,10 @@
 #include "Plain.h"
 #include "Inventory.h"
 #include "Arrow.h"
+#include "SaveSystem.h"
+#include "Menu.h"
+#include "BossLocation.h"
+#include "Boss.h"
 #include <string>
 
 int main()
@@ -46,6 +50,10 @@ int main()
     // === СТРЕЛА ===
     Arrow arrow;
 
+    // === КУЛДАУН СТРЕЛЬБЫ ===
+    float shootCooldown = 0.f;           // Текущий таймер
+    const float shootCooldownTime = 0.5f; // 0.5 секунды между выстрелами
+
     // === ПАРАМЕТРЫ ДЭША ===
     const float DASH_SPEED = 800.f;
     const float DASH_DURATION = 0.15f;
@@ -67,6 +75,9 @@ int main()
         atkLeft[i - 1].setSmooth(false);
         atkRight[i - 1].setSmooth(false);
     }
+    // === МЕНЕДЖЕР ПОРТАЛОВ ===
+    PortalManager portalManager;
+    portalManager.loadTextures(); // Загружаем текстуры
 
     // === ПЕРЕМЕННЫЕ ДЭША ===
     bool isDashing = false;
@@ -94,8 +105,22 @@ int main()
     PlainLocation plainLoc;
     plainLoc.load();
 
+    // === БОССЫ ===
+    Boss boss1, boss2;
+    boss1.init(Boss::BOSS_FIRE, sf::Vector2f(512, 200));   // Босс 1 сверху
+    boss2.init(Boss::BOSS_SLIME, sf::Vector2f(512, 200));  // Босс 2 сверху
+
     const std::vector<sf::RectangleShape>* currentCollisions = &obstacles;
     int currentLocationID = 0;
+
+    // === АРЕНЫ БОССОВ ===
+    BossLocation boss1Loc;
+    BossLocation boss2Loc;
+
+    // Спавн ставим в центр (512, 512), коллизии пока берем пустые или скопируй с plainLoc
+    boss1Loc.load("boss1_land.png", sf::Vector2f(512, 512), plainLoc.getObstacles());
+    boss2Loc.load("boss2_land.png", sf::Vector2f(512, 512), plainLoc.getObstacles());
+
 
     // === МИНИ-КАРТА ===
     sf::Texture minimapFrameTexture;
@@ -130,6 +155,131 @@ int main()
     hero.setPosition(512, 512);
     hero.setScale(2.f, 2.f);
 
+
+
+
+    // === ХП ГЕРОЯ ===
+    int heroMaxHP = 100;
+    int heroCurrentHP = 100;
+
+    // === СИСТЕМА УРОВНЕЙ И ОПЫТА ===
+    int heroLevel = 1;              // Текущий уровень
+    int heroCurrentXP = 0;          // Текущий опыт
+    int heroXPToNextLevel = 100;    // Опыт для следующего уровня (100, 200, 300...)
+
+    // === ШРИФТ ДЛЯ ТЕКСТА ===
+    sf::Font font;
+    // Загружаем стандартный шрифт Windows. 
+    // Если файла нет, скажи — я подскажу как сделать без файла шрифта.
+    if (!font.loadFromFile("C:/Windows/Fonts/arial.ttf")) {
+        std::cout << "Error: Could not load arial.ttf! Text won't show." << std::endl;
+    }
+
+    sf::Text levelText;
+    levelText.setFont(font);
+    levelText.setCharacterSize(20);      // Размер шрифта
+    levelText.setFillColor(sf::Color::White); // Цвет (белый)
+    levelText.setOutlineThickness(1.f);   // Обводка для читаемости
+    levelText.setOutlineColor(sf::Color::Black);
+
+    // Текстуры для XP бара (можно использовать те же что для HP)
+    sf::Texture texXPVoid, texXPFill;
+    texXPVoid.loadFromFile("xp_bar_void.png");  // Используем ту же пустоту
+    texXPFill.loadFromFile("xp_bar.png");        // Твоя зелёная полоска
+    texXPVoid.setSmooth(false);
+    texXPFill.setSmooth(false);
+
+
+    // === УРОН ОТ ВРАГОВ ===
+    float enemyDamageCooldown = 0.f;  // Таймер кулдауна
+    float enemyDamageInterval = 1.f;  // 1 секунда между ударами
+    bool isInvulnerable = false;      // Флаг неуязвимости
+    float invulnerableTimer = 0.f;    // Таймер мигания
+    float invulnerableDuration = 1.5f; // 1.5 секунды неуязвимости
+
+
+
+
+    // Текстуры бара
+    sf::Texture texHpVoid, texHpFill;
+    if (!texHpVoid.loadFromFile("hp_bar_void.png")) std::cout << "Error loading void" << std::endl;
+    if (!texHpFill.loadFromFile("hp_bar.png")) std::cout << "Error loading fill" << std::endl;
+    texHpVoid.setSmooth(false);
+    texHpFill.setSmooth(false);
+
+    // Спрайты бара
+    sf::Sprite sprHpVoid(texHpVoid);
+    sf::Sprite sprHpFill(texHpFill);
+
+    // Настройки бара (под твой HUD)
+    float barScale = 4.0f;  // Насколько увеличен бар
+    float barX = 500.f;     // Позиция X на экране
+    float barY = 650.f;     // Позиция Y на экране
+
+    sprHpVoid.setScale(barScale, barScale);
+    sprHpVoid.setPosition(barX, barY);
+    sprHpFill.setScale(barScale, barScale); // Масштаб меняется динамически
+    sprHpFill.setPosition(barX, barY);
+
+    // Функция отрисовки HP бара
+    auto drawHPBar = [&](sf::RenderWindow& window, int current, int max,
+        sf::Sprite& barVoid, sf::Sprite& barFill,
+        float posX, float posY) {
+            // Рисуем фон (пустоту)
+            barVoid.setPosition(posX, posY);
+            window.draw(barVoid);
+
+            // Рисуем заполнение (масштабируем по ширине)
+            float hpPercent = static_cast<float>(current) / static_cast<float>(max);
+            sf::FloatRect fillBounds = barFill.getGlobalBounds();
+            barFill.setScale(4.f * hpPercent, 4.f);  // Масштабируем только по X
+            barFill.setPosition(posX, posY);
+            window.draw(barFill);
+
+            // Сбрасываем масштаб обратно для следующего кадра
+            barFill.setScale(4.f, 4.f);
+        };
+
+    // Функция получения урона
+    auto takeDamage = [&](int damage) {
+        heroCurrentHP -= damage;
+        if (heroCurrentHP < 0) heroCurrentHP = 0;
+        std::cout << "Hero took " << damage << " damage! HP: "
+            << heroCurrentHP << "/" << heroMaxHP << std::endl;
+
+        // Проверка смерти
+        if (heroCurrentHP <= 0) {
+            std::cout << "Hero died! Respawning..." << std::endl;
+            heroCurrentHP = heroMaxHP;
+            hero.setPosition(512, 512);
+        }
+        };
+
+    // Функция получения опыта
+    auto gainXP = [&](int xpAmount) {
+        heroCurrentXP += xpAmount;
+        std::cout << "Hero gained " << xpAmount << " XP! Total: "
+            << heroCurrentXP << "/" << heroXPToNextLevel << std::endl;
+
+        // Проверка повышения уровня
+        while (heroCurrentXP >= heroXPToNextLevel) {
+            // Повышаем уровень!
+            heroCurrentXP -= heroXPToNextLevel;  // Оставляем остаток
+            heroLevel++;
+            heroXPToNextLevel += 100;  // Каждый уровень требует +100 XP
+
+            std::cout << "LEVEL UP! Hero is now level " << heroLevel
+                << "! Next level: " << heroXPToNextLevel << " XP" << std::endl;
+
+            // Здесь можно добавить бонусы за уровень (увеличение HP, урона и т.д.)
+            heroMaxHP += 10;  // +10 HP за каждый уровень
+            heroCurrentHP = heroMaxHP;  // Полное лечение при повышении
+        }
+        };
+
+
+
+
     // === КАМЕРА ===
     sf::View camera;
     camera.setSize(1280, 720);
@@ -149,6 +299,62 @@ int main()
     float attackTimer = 0.f;
     const float ATTACK_SPEED = 0.2f;
 
+
+
+    // === СИСТЕМА СОХРАНЕНИЙ ===
+    GameSaveData saveData;
+    bool hasSave = SaveSystem::loadGame(saveData);
+
+    // Если есть сохранение — загружаем данные
+    if (hasSave) {
+        heroCurrentHP = saveData.heroCurrentHP;
+        heroMaxHP = saveData.heroMaxHP;
+        heroLevel = saveData.heroLevel;
+        heroCurrentXP = saveData.heroCurrentXP;
+        heroXPToNextLevel = saveData.heroXPToNextLevel;
+        hero.setPosition(saveData.heroPosX, saveData.heroPosY);
+        currentLocationID = saveData.currentLocationID;
+
+        std::cout << "Loaded: Level " << heroLevel
+            << ", HP " << heroCurrentHP << "/" << heroMaxHP << std::endl;
+    }
+
+    // === МЕНЮ ИГРЫ ===
+    Menu gameMenu;
+
+    // Добавляем кнопки меню
+    gameMenu.addButton("RESUME", [&]() {
+        gameMenu.hide();  // Закрыть меню
+        });
+
+    gameMenu.addButton("SAVE & QUIT", [&]() {
+        // Сохраняем игру
+        saveData.heroCurrentHP = heroCurrentHP;
+        saveData.heroMaxHP = heroMaxHP;
+        saveData.heroLevel = heroLevel;
+        saveData.heroCurrentXP = heroCurrentXP;
+        saveData.heroXPToNextLevel = heroXPToNextLevel;
+        saveData.heroPosX = hero.getPosition().x;
+        saveData.heroPosY = hero.getPosition().y;
+        saveData.currentLocationID = currentLocationID;
+
+        const auto& equipment = inventory.getEquipment();
+        saveData.equippedWeapon = (equipment[0].type != ITEM_NONE) ? 1 : 0;
+        saveData.equippedArmor = (equipment[1].type != ITEM_NONE) ? 1 : 0;
+        saveData.equippedAccessory = (equipment[2].type != ITEM_NONE) ? 1 : 0;
+
+        SaveSystem::saveGame(saveData);
+        window.close();  // Выход
+        });
+
+    gameMenu.addButton("EXIT (NO SAVE)", [&]() {
+        window.close();  // Выход без сохранения
+        });
+
+    // Обновляем тексты кнопок
+    gameMenu.updateTexts();
+
+
     // === ФУНКЦИЯ ПРОВЕРКИ КОЛЛИЗИЙ ===
     auto checkCollision = [&](sf::FloatRect heroRect) -> bool {
         for (auto& obstacle : *currentCollisions) {
@@ -158,13 +364,87 @@ int main()
         return false;
         };
 
-    while (window.isOpen())
-    {
+    while (window.isOpen()) {
+        static bool wasPaused = false;
+        // Если меню открыто — полная пауза
+        if (gameMenu.isVisible()) {
+            sf::Event event;
+            while (window.pollEvent(event)) {
+                if (event.type == sf::Event::Closed) { /* ...сохранение... */ window.close(); }
+                if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape) {
+                    gameMenu.toggle();
+                }
+                gameMenu.handleInput(event, window);
+            }
+
+            // === Обновляем наведение мыши для подсветки кнопок ===
+            gameMenu.updateMouseHover(window);
+
+            window.clear(sf::Color(20, 20, 20));
+            window.setView(camera);
+            if (currentLocationID == 0) window.draw(mapSprite);
+            else plainLoc.draw(window);
+            portal.draw(window);
+            window.draw(hero);
+            arrow.draw(window);
+            window.setView(window.getDefaultView());
+            window.draw(hudBg);
+            gameMenu.draw(window);
+            window.display();
+            wasPaused = true;
+
+            continue;
+        }
+         // Сбрасываем deltaTime после паузы чтобы не было скачка
+        if (wasPaused) {
+            clock.restart();  // Сброс таймера
+            wasPaused = false;
+        }
         sf::Event event;
         while (window.pollEvent(event)) {
-            if (event.type == sf::Event::Closed) window.close();
-            if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape)
+            if (event.type == sf::Event::Closed) {
+                // Сохранение при закрытии через крестик
+                saveData.heroCurrentHP = heroCurrentHP;
+                saveData.heroMaxHP = heroMaxHP;
+                saveData.heroLevel = heroLevel;
+                saveData.heroCurrentXP = heroCurrentXP;
+                saveData.heroXPToNextLevel = heroXPToNextLevel;
+                saveData.heroPosX = hero.getPosition().x;
+                saveData.heroPosY = hero.getPosition().y;
+                saveData.currentLocationID = currentLocationID;
+
+                const auto& equipment = inventory.getEquipment();
+                saveData.equippedWeapon = (equipment[0].type != ITEM_NONE) ? 1 : 0;
+                saveData.equippedArmor = (equipment[1].type != ITEM_NONE) ? 1 : 0;
+                saveData.equippedAccessory = (equipment[2].type != ITEM_NONE) ? 1 : 0;
+
+                SaveSystem::saveGame(saveData);
                 window.close();
+            }
+
+            // === ESC: ОТКРЫТЬ/ЗАКРЫТЬ МЕНЮ ===
+            if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape) {
+                gameMenu.toggle();  // Переключить видимость меню
+            }
+
+            // Обработка ввода меню (если оно открыто)
+            if (gameMenu.isVisible()) {
+                gameMenu.handleInput(event, window);
+            }
+
+            // Ручное сохранение: F5
+            if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::F5) {
+                saveData.heroCurrentHP = heroCurrentHP;
+                saveData.heroMaxHP = heroMaxHP;
+                saveData.heroLevel = heroLevel;
+                saveData.heroCurrentXP = heroCurrentXP;
+                saveData.heroXPToNextLevel = heroXPToNextLevel;
+                saveData.heroPosX = hero.getPosition().x;
+                saveData.heroPosY = hero.getPosition().y;
+                saveData.currentLocationID = currentLocationID;
+
+                SaveSystem::saveGame(saveData);
+            }
         }
 
         float deltaTime = clock.restart().asSeconds();
@@ -186,6 +466,26 @@ int main()
             }
             portal.resetTrigger();
         }
+        // === ТЕЛЕПОРТАЦИЯ ЧЕРЕЗ ВЫПАВШИЕ ПОРТАЛЫ ===
+        if (currentLocationID == 1) { // Только с поляны можно уйти в портал
+            int portalIndex = portalManager.checkPlayerCollision(hero.getGlobalBounds());
+            if (portalIndex >= 0) {
+                auto& portals = portalManager.getPortals();
+                if (portals[portalIndex].type == PORTAL_BOSS1) {
+                    currentLocationID = 2; // ID Арены 1
+                    currentCollisions = &boss1Loc.getObstacles(); // Подключаем стены арены 1
+                    hero.setPosition(boss1Loc.getSpawnPos());
+                    std::cout << "Teleported to Boss 1 Arena!" << std::endl;
+                }
+                else if (portals[portalIndex].type == PORTAL_BOSS2) {
+                    currentLocationID = 3; // ID Арены 2
+                    currentCollisions = &boss2Loc.getObstacles(); // Подключаем стены арены 2
+                    hero.setPosition(boss2Loc.getSpawnPos());
+                    std::cout << "Teleported to Boss 2 Arena!" << std::endl;
+                }
+                portalManager.removePortal(portalIndex);
+            }
+        }
 
         // === ВВОД ДВИЖЕНИЯ ===
         sf::Vector2f movement(0.f, 0.f);
@@ -205,25 +505,139 @@ int main()
         portal.update(deltaTime);
         arrow.update(deltaTime);
 
-        // === ПРОВЕРКА СТОЛКНОВЕНИЙ СТРЕЛЫ С ВРАГАМИ ===
-        if (arrow.isActive() && currentLocationID == 1) { // Только на поляне
-            auto& enemies = plainLoc.getEnemyManager().getEnemies();
-            for (auto& enemy : enemies) {
-                if (arrow.getBounds().intersects(enemy.getBounds())) {
-                    // Попадание! Здесь потом добавим урон врагу
-                    std::cout << "Arrow hit enemy!" << std::endl;
-                    arrow.deactivate();
-                    break;
+        // === ПРОВЕРКА СТОЛКНОВЕНИЙ СТРЕЛЫ ===
+        if (arrow.isActive()) {
+            // 1. Обычные враги (Поляна)
+            if (currentLocationID == 1) {
+                auto& enemies = plainLoc.getEnemyManager().getEnemies();
+                for (auto& enemy : enemies) {
+                    if (!enemy.isDead() && arrow.getBounds().intersects(enemy.getBounds())) {
+                        std::cout << "Arrow hit enemy!" << std::endl;
+                        int damage = 10;
+                        bool died = const_cast<Enemy&>(enemy).takeDamage(damage);
+                        if (died) {
+                            gainXP(15);
+                            if (std::rand() % 100 < 10) {
+                                PortalType pType = (std::rand() % 2 == 0) ? PORTAL_BOSS1 : PORTAL_BOSS2;
+                                portalManager.spawnPortal(enemy.getPosition(), pType);
+                            }
+                        }
+                        arrow.deactivate();
+                        break;
+                    }
+                }
+            }
+
+            // 2. БОСС 1 (Арена ID=2)
+            if (currentLocationID == 2 && boss1.isAlive() && arrow.getBounds().intersects(boss1.getBounds())) {
+                int prevHP = boss1.getHP();
+                boss1.takeDamage(25);
+                arrow.deactivate();
+
+                // Проверяем, умер ли босс, и даём XP
+                if (prevHP > 0 && boss1.getHP() <= 0) {
+                    gainXP(boss1.getXPReward());  // +150 XP
+                }
+            }
+
+            // 3. БОСС 2 (Арена ID=3)
+            if (currentLocationID == 3 && boss2.isAlive() && arrow.getBounds().intersects(boss2.getBounds())) {
+                int prevHP = boss2.getHP();
+                boss2.takeDamage(25);
+                arrow.deactivate();
+
+                // Проверяем, умер ли босс, и даём XP
+                if (prevHP > 0 && boss2.getHP() <= 0) {
+                    gainXP(boss2.getXPReward());  // +150 XP
                 }
             }
         }
+        // === ОБНОВЛЕНИЕ ЛОКАЦИИ (ВРАГИ И БОССЫ) ===
 
-
-        // === ОБНОВЛЕНИЕ ЛОКАЦИИ (ВРАГИ) ===
+        // 1. Поляна (слизни)
         if (currentLocationID == 1) {
-            // Если мы на поляне, обновляем врагов
             plainLoc.update(deltaTime, hero.getPosition());
+
+            auto& enemies = plainLoc.getEnemyManager().getEnemies();
+            for (auto& enemy : enemies) {
+                if (!enemy.isDead() && hero.getGlobalBounds().intersects(enemy.getBounds())) {
+
+                    // Если кулдаун прошёл И герой не в неуязвимости
+                    if (enemyDamageCooldown <= 0.f && !isInvulnerable) {
+                        heroCurrentHP -= 10;
+                        enemyDamageCooldown = enemyDamageInterval;
+                        isInvulnerable = true;
+                        invulnerableTimer = invulnerableDuration;
+                        std::cout << "Hit by slime! HP: " << heroCurrentHP << std::endl;
+
+                        // === ПРОВЕРКА СМЕРТИ (СРАЗУ ПОСЛЕ УРОНА) ===
+                        if (heroCurrentHP <= 0) {
+                            heroCurrentHP = 0; // Фиксируем на 0
+                            std::cout << "HERO DIED! Respawning..." << std::endl;
+
+                            // Полный сброс состояния
+                            heroCurrentHP = heroMaxHP;
+                            hero.setPosition(512, 512); // Или plainLoc.getSpawnPos()
+                            isInvulnerable = true;      // Даём безопасные кадры после респауна
+                            invulnerableTimer = 2.0f;
+                            enemyDamageCooldown = 2.0f; // Чтобы не убили мгновенно снова
+                        }
+                    }
+                }
+            }
         }
+        // 2. Босс 1 (Арена огненная)
+        if (currentLocationID == 2) {
+            // Обновляем босса ВСЕГДА (даже если мёртв - для таймера респавна)
+            boss1.update(deltaTime, hero.getPosition());
+
+            // Урон герою наносится только если босс жив
+            if (boss1.isAlive() && boss1.getBounds().intersects(hero.getGlobalBounds())) {
+                if (!isInvulnerable) {
+                    heroCurrentHP -= 20;
+                    isInvulnerable = true;
+                    invulnerableTimer = invulnerableDuration;
+                    std::cout << "Hit by Boss 1! HP: " << heroCurrentHP << std::endl;
+
+                    if (heroCurrentHP <= 0) {
+                        heroCurrentHP = heroMaxHP;
+                        hero.setPosition(512, 512);
+                        isInvulnerable = false;
+                    }
+                }
+            }
+        }
+        if (currentLocationID == 3) {
+            // Обновляем босса ВСЕГДА
+            boss2.update(deltaTime, hero.getPosition());
+
+            if (boss2.isAlive() && boss2.getBounds().intersects(hero.getGlobalBounds())) {
+                if (!isInvulnerable) {
+                    heroCurrentHP -= 20;
+                    isInvulnerable = true;
+                    invulnerableTimer = invulnerableDuration;
+                    std::cout << "Hit by Boss 2! HP: " << heroCurrentHP << std::endl;
+
+                    if (heroCurrentHP <= 0) {
+                        heroCurrentHP = heroMaxHP;
+                        hero.setPosition(512, 512);
+                        isInvulnerable = false;
+                    }
+                }
+            }
+        }
+        // === ОБНОВЛЕНИЕ ТАЙМЕРОВ УРОНА ===
+        if (enemyDamageCooldown > 0.f) {
+            enemyDamageCooldown -= deltaTime;
+        }
+
+        if (isInvulnerable) {
+            invulnerableTimer -= deltaTime;
+            if (invulnerableTimer <= 0.f) {
+                isInvulnerable = false;
+            }
+        }
+
         // === ОБРАБОТКА ПРОБЕЛА (ДЭШ) ===
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space) && !isDashing && dashCooldown <= 0.f) {
             sf::Vector2f dir(0.f, 0.f);
@@ -345,22 +759,118 @@ int main()
         window.clear(sf::Color(20, 20, 20));
         window.setView(camera);
 
-
         if (currentLocationID == 0) {
             window.draw(mapSprite);
         }
-        else {
+        else if (currentLocationID == 1) {
             plainLoc.draw(window);
+            portalManager.drawAll(window);
+        }
+        else if (currentLocationID == 2) {
+            boss1Loc.draw(window); // Арена Босса 1
+
+            // Рисуем Босса 1
+            if (boss1.isAlive()) {
+                boss1.draw(window);
+
+                // ХП бар Босса 1
+                static sf::Texture bossBarVoidTex, bossBarFillTex;
+                static bool bossBarsLoaded = false;
+                if (!bossBarsLoaded) {
+                    bossBarVoidTex.loadFromFile("hp_bar_void.png");
+                    bossBarFillTex.loadFromFile("hp_bar.png");
+                    bossBarVoidTex.setSmooth(false);
+                    bossBarFillTex.setSmooth(false);
+                    bossBarsLoaded = true;
+                }
+
+                sf::Vector2f bossPos = boss1.getPosition();
+                float barScale = 4.0f;
+
+                sf::Sprite boss1BarVoid(bossBarVoidTex);
+                boss1BarVoid.setPosition(bossPos.x - 30, bossPos.y - 35);
+                boss1BarVoid.setScale(barScale, barScale);
+                window.draw(boss1BarVoid);
+
+                float hpPercent = (float)boss1.getHP() / boss1.getMaxHP();
+                int fullWidth = bossBarFillTex.getSize().x;
+                int currentWidth = static_cast<int>(fullWidth * hpPercent);
+
+                sf::Sprite boss1BarFill(bossBarFillTex);
+                boss1BarFill.setTextureRect(sf::IntRect(0, 0, currentWidth, bossBarFillTex.getSize().y));
+                boss1BarFill.setPosition(bossPos.x - 30, bossPos.y - 35);
+                boss1BarFill.setScale(barScale, barScale);
+                window.draw(boss1BarFill);
+            }
+        }
+        else if (currentLocationID == 3) {
+            boss2Loc.draw(window); // Арена Босса 2
+
+            // Рисуем Босса 2
+            if (boss2.isAlive()) {
+                boss2.draw(window);
+
+                // ХП бар Босса 2 (те же текстуры)
+                sf::Vector2f bossPos = boss2.getPosition();
+                float barScale = 4.0f;
+
+                sf::Sprite boss2BarVoid;
+                boss2BarVoid.setTexture(texHpVoid);
+                boss2BarVoid.setPosition(bossPos.x - 30, bossPos.y - 35);
+                boss2BarVoid.setScale(barScale, barScale);
+                window.draw(boss2BarVoid);
+
+                float hpPercent = (float)boss2.getHP() / boss2.getMaxHP();
+                int fullWidth = texHpFill.getSize().x;
+                int currentWidth = static_cast<int>(fullWidth * hpPercent);
+
+                sf::Sprite boss2BarFill(texHpFill);
+                boss2BarFill.setTextureRect(sf::IntRect(0, 0, currentWidth, texHpFill.getSize().y));
+                boss2BarFill.setPosition(bossPos.x - 30, bossPos.y - 35);
+                boss2BarFill.setScale(barScale, barScale);
+                window.draw(boss2BarFill);
+            }
+        }
+        portal.draw(window);
+
+        // Рисуем героя (мигаем если неуязвим)
+        if (!isInvulnerable || static_cast<int>(invulnerableTimer * 10) % 2 == 0) {
+            window.draw(hero);
         }
 
+        // === БРОНЯ (ОВЕРЛЕЙ) ===
+        static sf::Texture armorOverlayTex;
+        static bool armorLoaded = false;
 
-        portal.draw(window);
-        window.draw(hero);
+        if (!armorLoaded) {
+            if (armorOverlayTex.loadFromFile("armor_overlay.png")) {
+                armorOverlayTex.setSmooth(false);
+                std::cout << "Armor loaded!" << std::endl;
+            }
+            else {
+                std::cout << "Warning: armor_overlay.png not found!" << std::endl;
+            }
+            armorLoaded = true;
+        }
+
+        sf::Sprite armorOverlay;
+        armorOverlay.setTexture(armorOverlayTex);
+        armorOverlay.setScale(2.f, 2.f);
+
+        // Рисуем броню если экипирована
+        const auto& equipment = inventory.getEquipment();  // ОДИН РАЗ!
+        if (equipment[1].type == ITEM_ARMOR) {
+            armorOverlay.setPosition(hero.getPosition().x, hero.getPosition().y);
+            window.draw(armorOverlay);
+        }
+
         arrow.draw(window);
+
+
 
         // === HUD ===
         window.setView(window.getDefaultView());
-
+        // 1. Рисуем фон HUD
         float hudScale = 6.0f;
         hudBg.setScale(hudScale, hudScale);
         float bgWidth = hudBg.getGlobalBounds().width;
@@ -368,11 +878,73 @@ int main()
         hudBg.setPosition((winSize.x - bgWidth) / 2.f, winSize.y - bgHeight - 50);
         window.draw(hudBg);
 
-        hpBar.setScale(4.0f, 4.0f); hpBar.setPosition(500, 650); window.draw(hpBar);
+        // 2. === РИСУЕМ HP БАР ===
+        float hpBarX = 650.f;
+        float hpBarY = 860.f;
+        float barScale = 4.0f;
+
+        sf::Sprite hpVoidSprite(texHpVoid);
+        hpVoidSprite.setPosition(hpBarX, hpBarY);
+        hpVoidSprite.setScale(barScale, barScale);
+        window.draw(hpVoidSprite);
+
+        float hpPercent = static_cast<float>(heroCurrentHP) / static_cast<float>(heroMaxHP);
+        if (hpPercent < 0.f) hpPercent = 0.f;
+        if (hpPercent > 1.f) hpPercent = 1.f;
+
+        int hpFullWidth = texHpFill.getSize().x;
+        int hpCurrentWidth = static_cast<int>(hpFullWidth * hpPercent);
+
+        sf::Sprite hpFillSprite(texHpFill);
+        hpFillSprite.setTextureRect(sf::IntRect(0, 0, hpCurrentWidth, texHpFill.getSize().y));
+        hpFillSprite.setPosition(hpBarX, hpBarY);
+        hpFillSprite.setScale(barScale, barScale);
+        window.draw(hpFillSprite);
+
+        // 3. === РИСУЕМ XP БАР (ЗЕЛЁНЫЙ) ===
+        float xpBarX = 650.f;   // Чуть левее HP
+        float xpBarY = 960.f;  // Ниже (на зелёной полоске)
+        float xpBarScale = 4.0f;
+
+        // Фон (пустота)
+        sf::Sprite xpVoidSprite(texXPVoid);
+        xpVoidSprite.setPosition(xpBarX, xpBarY);
+        xpVoidSprite.setScale(xpBarScale, xpBarScale);
+        window.draw(xpVoidSprite);
+
+        // Заполнение (зелёная часть)
+        float xpPercent = static_cast<float>(heroCurrentXP) / static_cast<float>(heroXPToNextLevel);
+        if (xpPercent < 0.f) xpPercent = 0.f;
+        if (xpPercent > 1.f) xpPercent = 1.f;
+
+        int xpFullWidth = texXPFill.getSize().x;
+        int xpCurrentWidth = static_cast<int>(xpFullWidth * xpPercent);
+
+        sf::Sprite xpFillSprite(texXPFill);
+        xpFillSprite.setTextureRect(sf::IntRect(0, 0, xpCurrentWidth, texXPFill.getSize().y));
+        xpFillSprite.setPosition(xpBarX, xpBarY);
+        xpFillSprite.setScale(xpBarScale, xpBarScale);
+        window.draw(xpFillSprite);
+
+        // === РИСУЕМ ТЕКСТ УРОВНЯ ===
+      // 1. Обновляем текст
+        std::string lvlString = "Level: " + std::to_string(heroLevel);
+        levelText.setString(lvlString);
+
+        // 2. Позиционируем под XP баром
+        // xpBarY + 45.f означает: позиция бара + высота бара + небольшой отступ
+        levelText.setPosition(xpBarX + 20, xpBarY + 45.f);
+
+        // 3. Рисуем
+        window.draw(levelText);
+
+        // Остальные бары (MP, XP)
         mpBar.setScale(4.0f, 4.0f); mpBar.setPosition(500, 710); window.draw(mpBar);
-        xpBar.setScale(4.0f, 4.0f); xpBar.setPosition(495, 760); window.draw(xpBar);
         weaponBar.setScale(4.0f, 4.0f); weaponBar.setPosition(740, 715); window.draw(weaponBar);
         invBar.setScale(4.0f, 4.0f); invBar.setPosition(950, 690); window.draw(invBar);
+
+
+
 
 
         // === ОБРАБОТКА ЛКМ ===
@@ -395,11 +967,18 @@ int main()
         sf::FloatRect hudRect(hudX, hudY, hudW, hudH);
         bool clickedOnHUD = hudRect.contains(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y));
 
-        // === СТРЕЛЬБА ===
-        if (lmbHeld && !clickedOnHUD) {
+        // === СТРЕЛЬБА (с кулдауном) ===
+        // Обновляем кулдаун
+        if (shootCooldown > 0.f) {
+            shootCooldown -= deltaTime;
+        }
+
+        // Стреляем только если: зажата кнопка + не по HUD + кулдаун прошёл
+        if (lmbHeld && !clickedOnHUD && shootCooldown <= 0.f) {
             const auto& equipment = inventory.getEquipment();
-            if (equipment[0].type != ITEM_NONE && !arrow.isActive()) {
-                arrow.deactivate();
+            if (equipment[0].type != ITEM_NONE) {  // Лук экипирован
+
+                arrow.deactivate();  // Сбрасываем старую стрелу
                 std::cout << "SHOOT!" << std::endl;
 
                 sf::Vector2f heroCenter(
@@ -413,13 +992,27 @@ int main()
 
                 arrow.shoot(heroCenter, toMouse, equipment[0].damage);
 
+                // Запускаем анимацию атаки
                 if (!isAttacking) {
                     isAttacking = true;
                     attackFrame = 0;
                     attackTimer = 0.f;
                 }
+
+                // === ЗАПУСКАЕМ КУЛДАУН ===
+                shootCooldown = shootCooldownTime;
             }
         }
+        // Индикатор готовности к выстрелу (маленькая точка)
+        sf::CircleShape readyIndicator(3.f);
+        if (shootCooldown <= 0.f) {
+            readyIndicator.setFillColor(sf::Color::Green);  // Можно стрелять
+        }
+        else {
+            readyIndicator.setFillColor(sf::Color::Red);    // Кулдаун
+        }
+        readyIndicator.setPosition(10, 10);  // Угол экрана
+        window.draw(readyIndicator);
 
         if (lmbReleased) {
             isAttacking = false;
@@ -501,6 +1094,10 @@ int main()
             float portalDotY = mapInnerY + (portalRatioY * mapInnerSize);
             portalDotTemp.setPosition(portalDotX - 2, portalDotY - 2);
             window.draw(portalDotTemp);
+        }
+        // === ОТРИСОВКА МЕНЮ (поверх всего) ===
+        if (gameMenu.isVisible()) {
+            gameMenu.draw(window);
         }
         window.display();
     }
