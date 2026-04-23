@@ -33,4 +33,49 @@ void PlainLocation::update(float deltaTime, const sf::Vector2f& playerPos) {
 void PlainLocation::draw(sf::RenderWindow& window) {
     window.draw(mapSprite);
     enemyManager.drawAll(window);
+
+    // === РИСУЕМ HP БАРЫ ВРАГОВ ===
+    // Текстуры бара (можно использовать те же, что у игрока)
+    static sf::Texture barVoidTex, barFillTex;
+    static bool loaded = false;
+    if (!loaded) {
+        barVoidTex.loadFromFile("hp_bar_void.png");
+        barFillTex.loadFromFile("hp_bar.png");
+        barVoidTex.setSmooth(false);
+        barFillTex.setSmooth(false);
+        loaded = true;
+    }
+
+    // Получаем доступ к врагам
+    auto& enemies = enemyManager.getEnemies();
+    for (auto& enemy : enemies) {
+        if (enemy.getCurrentHP() > 0) {  // Рисуем только живым
+            // Позиция: над головой врага
+            sf::Vector2f pos = enemy.getPosition();
+            float barX = pos.x;
+            float barY = pos.y - 25.f;  // Чуть выше врага
+            float barScale = 1.0f;       // Меньше чем у игрока
+
+            // Фон (пустота)
+            sf::Sprite barVoid(barVoidTex);
+            barVoid.setPosition(barX, barY);
+            barVoid.setScale(barScale, barScale);
+            window.draw(barVoid);
+
+            // Заполнение (красная часть)
+            float hpPercent = static_cast<float>(enemy.getCurrentHP()) /
+                static_cast<float>(enemy.getMaxHP());
+            if (hpPercent < 0.f) hpPercent = 0.f;
+            if (hpPercent > 1.f) hpPercent = 1.f;
+
+            int fullWidth = barFillTex.getSize().x;  // 57 пикселей
+            int currentWidth = static_cast<int>(fullWidth * hpPercent);
+
+            sf::Sprite barFill(barFillTex);
+            barFill.setTextureRect(sf::IntRect(0, 0, currentWidth, barFillTex.getSize().y));
+            barFill.setPosition(barX, barY);
+            barFill.setScale(barScale, barScale);
+            window.draw(barFill);
+        }
+    }
 }
