@@ -7,7 +7,9 @@ enum ItemType {
     ITEM_WEAPON = 0,
     ITEM_ARMOR = 1,
     ITEM_ACCESSORY = 2,
-    ITEM_NONE = -1
+    ITEM_NONE = -1,
+    ITEM_MAGE_WAND = 3,    // Посох мага
+    ITEM_MAGE_ROBE = 4     // Мантия мага
 };
 
 struct Item {
@@ -17,9 +19,13 @@ struct Item {
     bool isEquipped;
     float damage;
 
-    Item() : type(ITEM_NONE), isEquipped(false), damage(0.f) {}
-    Item(const std::string& n, const std::string& filename, ItemType t, float dmg = 0.f)
-        : name(n), type(t), isEquipped(false), damage(dmg) {
+    // === НОВОЕ: Для атаки мага ===
+    enum AttackType { ATTACK_NONE, ATTACK_ARROW, ATTACK_FIREBALL };
+    AttackType attackType;
+
+    Item() : type(ITEM_NONE), isEquipped(false), damage(0.f), attackType(ATTACK_NONE) {}
+    Item(const std::string& n, const std::string& filename, ItemType t, float dmg = 0.f, AttackType atk = ATTACK_NONE)
+        : name(n), type(t), isEquipped(false), damage(dmg), attackType(atk) {
         if (!texture.loadFromFile(filename)) {
             texture.create(16, 16);
         }
