@@ -8,8 +8,119 @@
 #include "SaveSystem.h"
 #include "Menu.h"
 #include "BossLocation.h"
+#include "LootBag.h"
+#include "Fireball.h"
 #include "Boss.h"
 #include <string>
+
+// Замена пробелов на подчеркивания (для сохранения)
+std::string replaceSpaces(const std::string& str) {
+    std::string result = str;
+    for (char& c : result) {
+        if (c == ' ') c = '_';
+    }
+    return result;
+}
+
+// Замена подчеркиваний на пробелы (для загрузки)
+std::string restoreSpaces(const std::string& str) {
+    std::string result = str;
+    for (char& c : result) {
+        if (c == '_') c = ' ';
+    }
+    return result;
+}
+
+// Конвертируем Item в SavedItem (для сохранения)
+SavedItem itemToSaved(const Item& item) {
+    SavedItem saved;
+    if (item.type == ITEM_NONE) {
+        saved.isEmpty = true;
+        saved.name = "";
+    }
+    else {
+        saved.isEmpty = false;
+        saved.name = replaceSpaces(item.name);  // <-- ЗАМЕНИТЬ ПРОБЕЛЫ
+        saved.type = static_cast<int>(item.type);
+        saved.damage = item.damage;
+        saved.attackType = static_cast<int>(item.attackType);
+
+        // Отладочный вывод
+        std::cout << "Saving item: " << item.name
+            << " (type=" << saved.type
+            << ", damage=" << saved.damage
+            << ", attackType=" << saved.attackType << ")" << std::endl;
+    }
+    return saved;
+}
+
+Item savedToItem(const SavedItem& saved) {
+    // Проверяем на пустой слот
+    if (saved.isEmpty || saved.name.empty()) {
+        std::cout << "Loading: Empty slot" << std::endl;
+        return Item(); // Пустой предмет
+    }
+
+    std::string itemName = restoreSpaces(saved.name);
+
+    std::cout << "Loading item: " << itemName
+        << " (type=" << saved.type
+        << ", damage=" << saved.damage
+        << ", attackType=" << saved.attackType << ")" << std::endl;
+
+    Item item;
+    item.name = itemName;  // Используем восстановленное имя
+    item.type = static_cast<ItemType>(saved.type);
+    item.damage = saved.damage;
+    item.attackType = static_cast<Item::AttackType>(saved.attackType);
+    item.isEquipped = false;
+
+    // Загружаем текстуру по имени предмета
+    std::string filename = "";
+
+    // Проверяем имя предмета
+    if (itemName == "Mage Wand" || itemName == "Посох мага") {
+        filename = "wand_mage.png";
+        item.name = "Mage Wand";
+    }
+    else if (itemName == "Mage Robe" || itemName == "Мантия мага") {
+        filename = "armor_mage.png";
+        item.name = "Mage Robe";
+    }
+    else if (itemName == "Bow" || itemName == "Лук") {
+        filename = "item_bow.png";
+        item.name = "Bow";
+    }
+    else if (itemName == "Armor" || itemName == "Броня") {
+        filename = "item_armor.png";
+        item.name = "Armor";
+    }
+    else if (itemName == "Ring" || itemName == "Кольцо") {
+        filename = "item_ring.png";
+        item.name = "Ring";
+    }
+    else {
+        // Неизвестный предмет — создаем заглушку
+        std::cout << "Warning: Unknown item '" << itemName << "'!" << std::endl;
+        item.texture.create(16, 16);
+        item.texture.setSmooth(false);
+        return item;
+    }
+
+    // Загружаем текстуру
+    if (!filename.empty()) {
+        if (!item.texture.loadFromFile(filename)) {
+            std::cout << "Error: Could not load texture '" << filename << "' for item '" << itemName << "'!" << std::endl;
+            sf::Image errorImg;
+            errorImg.create(16, 16, sf::Color(255, 0, 255));
+            item.texture.loadFromImage(errorImg);
+        }
+        item.texture.setSmooth(false);
+    }
+
+    return item;
+}
+
 
 int main()
 {
@@ -49,6 +160,8 @@ int main()
 
     // === СТРЕЛА ===
     Arrow arrow;
+    // === ОГНЕННЫЙ ШАР (для мага) ===
+    Fireball fireball;
 
     // === КУЛДАУН СТРЕЛЬБЫ ===
     float shootCooldown = 0.f;           // Текущий таймер
@@ -113,6 +226,35 @@ int main()
     const std::vector<sf::RectangleShape>* currentCollisions = &obstacles;
     int currentLocationID = 0;
 
+    // === ЛУТ С БОССОВ ===
+    LootBag lootBag;
+    bool lootMenuOpen = false;  // Флаг: открыто ли меню лута
+
+
+    // === UI ДЛЯ МЕНЮ ЛУТА ===
+    sf::RectangleShape lootMenuBg;
+    sf::Texture lootMenuBgTex;
+    std::vector<sf::Sprite> lootItemSprites;  // Спрайты предметов в меню
+    std::vector<sf::Text> lootItemNames;      // Названия предметов
+    bool isDraggingFromLoot = false;          // Перетаскиваем ли предмет
+    int draggedLootIndex = -1;                 // Индекс перетаскиваемого предмета
+    sf::Vector2f dragOffset;                   // Смещение при перетаскивании
+
+
+    // Посох мага = оружие с огненным шаром
+    std::vector<Item> boss1Loot = { Item("Mage Wand", "wand_mage.png", ITEM_WEAPON, 35.f, Item::ATTACK_FIREBALL) };
+
+    // Мантия мага = броня
+    std::vector<Item> boss2Loot = { Item("Mage Robe", "armor_mage.png", ITEM_ARMOR) };
+
+
+    // === СТАТИСТИКА ИГРЫ ===
+    float totalPlayTime = 0.f;    // Время игры в секундах
+    int slimesKilled = 0;          // Убито слизней
+    int bossesKilled = 0;          // Убито боссов
+    bool boss1Defeated = false;    // Флаг: босс 1 убит
+    bool boss2Defeated = false;    // Флаг: босс 2 убит
+
     // === АРЕНЫ БОССОВ ===
     BossLocation boss1Loc;
     BossLocation boss2Loc;
@@ -162,6 +304,14 @@ int main()
     int heroMaxHP = 100;
     int heroCurrentHP = 100;
 
+    // === МАНА ГЕРОЯ ===
+    int heroMaxMP = 100;           // Максимальная мана
+    int heroCurrentMP = 100;       // Текущая мана
+    const int FIREBALL_COST = 20;  // Стоимость файербола
+    float mpRegenTimer = 0.f;      // Таймер для регенерации маны
+    const float MP_REGEN_DELAY = 0.f;   // <-- Без задержки (было 3.0)
+    const float MP_REGEN_RATE = 200.f;  // <-- 200 маны/сек = мгновенно (было 50)
+
     // === СИСТЕМА УРОВНЕЙ И ОПЫТА ===
     int heroLevel = 1;              // Текущий уровень
     int heroCurrentXP = 0;          // Текущий опыт
@@ -197,8 +347,19 @@ int main()
     float invulnerableTimer = 0.f;    // Таймер мигания
     float invulnerableDuration = 1.5f; // 1.5 секунды неуязвимости
 
+    // === ИНИЦИАЛИЗАЦИЯ UI МЕНЮ ЛУТА ===
+    if (!lootMenuBgTex.loadFromFile("loot_menu_bg.png")) {
+        std::cout << "ERROR: loot_menu_bg.png NOT FOUND!" << std::endl;
+        std::cout << "Current working directory: " << std::endl;
 
-
+        // Создаем заглушку
+        sf::Image fallbackImg;
+        fallbackImg.create(300, 200, sf::Color(50, 50, 50, 230));
+        lootMenuBgTex.loadFromImage(fallbackImg);
+    }
+    lootMenuBgTex.setSmooth(false);
+    lootMenuBg.setTexture(&lootMenuBgTex);
+    lootMenuBg.setScale(1.f, 1.f);
 
     // Текстуры бара
     sf::Texture texHpVoid, texHpFill;
@@ -300,13 +461,13 @@ int main()
     const float ATTACK_SPEED = 0.2f;
 
 
-
     // === СИСТЕМА СОХРАНЕНИЙ ===
-    GameSaveData saveData;
+    GameSaveData saveData = {}; // Инициализация нулями
     bool hasSave = SaveSystem::loadGame(saveData);
 
     // Если есть сохранение — загружаем данные
     if (hasSave) {
+        // Сначала загружаем базовые данные
         heroCurrentHP = saveData.heroCurrentHP;
         heroMaxHP = saveData.heroMaxHP;
         heroLevel = saveData.heroLevel;
@@ -315,8 +476,53 @@ int main()
         hero.setPosition(saveData.heroPosX, saveData.heroPosY);
         currentLocationID = saveData.currentLocationID;
 
-        std::cout << "Loaded: Level " << heroLevel
-            << ", HP " << heroCurrentHP << "/" << heroMaxHP << std::endl;
+        // === ЗАГРУЖАЕМ СТАТИСТИКУ ===
+        totalPlayTime = saveData.totalPlayTime;
+        slimesKilled = saveData.slimesKilled;
+        bossesKilled = saveData.bossesKilled;
+
+        // === ЗАГРУЖАЕМ ЭКИПИРОВКУ (сначала!) ===
+        auto& equipment = const_cast<std::vector<Item>&>(inventory.getEquipment());
+
+        // Оружие
+        if (saveData.equippedWeapon == 1) {
+            if (saveData.equippedWeaponType == 1) {
+                equipment[0] = Item("Mage Wand", "wand_mage.png", ITEM_WEAPON, 35.f, Item::ATTACK_FIREBALL);
+            }
+            else {
+                equipment[0] = Item("Bow", "item_bow.png", ITEM_WEAPON, 25.f, Item::ATTACK_ARROW);
+            }
+            equipment[0].isEquipped = true;
+        }
+
+        // Броня
+        if (saveData.equippedArmor == 1) {
+            if (saveData.equippedArmorType == 1) {
+                equipment[1] = Item("Mage Robe", "armor_mage.png", ITEM_ARMOR);
+            }
+            else {
+                equipment[1] = Item("Armor", "item_armor.png", ITEM_ARMOR);
+            }
+            equipment[1].isEquipped = true;
+        }
+
+        // Аксессуар
+        if (saveData.equippedAccessory == 1) {
+            equipment[2] = Item("Ring", "item_ring.png", ITEM_ACCESSORY);
+            equipment[2].isEquipped = true;
+        }
+
+        // === ЗАГРУЖАЕМ РЮКЗАК (после экипировки!) ===
+        auto& backpack = const_cast<std::vector<Item>&>(inventory.getBackpack());
+        for (int i = 0; i < 6; ++i) {
+            std::cout << "Loading backpack slot " << i << ": isEmpty="
+                << saveData.backpack[i].isEmpty
+                << ", name='" << saveData.backpack[i].name << "'" << std::endl;
+            backpack[i] = savedToItem(saveData.backpack[i]);
+        }
+
+        std::cout << "Loaded: Level " << heroLevel << ", Time: "
+            << (int)totalPlayTime << "s, Slimes: " << slimesKilled << std::endl;
     }
 
     // === МЕНЮ ИГРЫ ===
@@ -338,9 +544,38 @@ int main()
         saveData.heroPosY = hero.getPosition().y;
         saveData.currentLocationID = currentLocationID;
 
+        // === СОХРАНЯЕМ СТАТИСТИКУ ===
+        saveData.totalPlayTime = totalPlayTime;
+        saveData.slimesKilled = slimesKilled;
+        saveData.bossesKilled = bossesKilled;
+
         const auto& equipment = inventory.getEquipment();
+
+        // === СОХРАНЯЕМ РЮКЗАК ===
+        const auto& backpack = inventory.getBackpack();
+        for (int i = 0; i < 6; ++i) {
+            saveData.backpack[i] = itemToSaved(backpack[i]);
+        }
+
+        // Оружие
         saveData.equippedWeapon = (equipment[0].type != ITEM_NONE) ? 1 : 0;
+        if (equipment[0].type == ITEM_WEAPON && equipment[0].name == "Mage Wand") {
+            saveData.equippedWeaponType = 1;  // Посох мага
+        }
+        else {
+            saveData.equippedWeaponType = 0;  // Лук или пусто
+        }
+
+        // Броня
         saveData.equippedArmor = (equipment[1].type != ITEM_NONE) ? 1 : 0;
+        if (equipment[1].type == ITEM_ARMOR && equipment[1].name == "Mage Robe") {
+            saveData.equippedArmorType = 1;  // Мантия мага
+        }
+        else {
+            saveData.equippedArmorType = 0;  // Броня или пусто
+        }
+
+        // Аксессуар
         saveData.equippedAccessory = (equipment[2].type != ITEM_NONE) ? 1 : 0;
 
         SaveSystem::saveGame(saveData);
@@ -389,13 +624,19 @@ int main()
             arrow.draw(window);
             window.setView(window.getDefaultView());
             window.draw(hudBg);
-            gameMenu.draw(window);
+            // === ОТРИСОВКА МЕНЮ ===
+            if (gameMenu.isVisible()) {
+                gameMenu.draw(window);
+
+                // === РИСУЕМ СТАТИСТИКУ ===
+                gameMenu.drawStats(window, totalPlayTime, slimesKilled, bossesKilled);
+            }
             window.display();
             wasPaused = true;
 
             continue;
         }
-         // Сбрасываем deltaTime после паузы чтобы не было скачка
+        // Сбрасываем deltaTime после паузы чтобы не было скачка
         if (wasPaused) {
             clock.restart();  // Сброс таймера
             wasPaused = false;
@@ -403,7 +644,7 @@ int main()
         sf::Event event;
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed) {
-                // Сохранение при закрытии через крестик
+                // === СОХРАНЕНИЕ ПРИ ЗАКРЫТИИ ===
                 saveData.heroCurrentHP = heroCurrentHP;
                 saveData.heroMaxHP = heroMaxHP;
                 saveData.heroLevel = heroLevel;
@@ -412,11 +653,20 @@ int main()
                 saveData.heroPosX = hero.getPosition().x;
                 saveData.heroPosY = hero.getPosition().y;
                 saveData.currentLocationID = currentLocationID;
+                saveData.totalPlayTime = totalPlayTime;
+                saveData.slimesKilled = slimesKilled;
+                saveData.bossesKilled = bossesKilled;
 
                 const auto& equipment = inventory.getEquipment();
                 saveData.equippedWeapon = (equipment[0].type != ITEM_NONE) ? 1 : 0;
                 saveData.equippedArmor = (equipment[1].type != ITEM_NONE) ? 1 : 0;
                 saveData.equippedAccessory = (equipment[2].type != ITEM_NONE) ? 1 : 0;
+
+                // === СОХРАНЯЕМ РЮКЗАК ===
+                const auto& backpackSave = inventory.getBackpack();
+                for (int i = 0; i < 6; ++i) {
+                    saveData.backpack[i] = itemToSaved(backpackSave[i]);
+                }
 
                 SaveSystem::saveGame(saveData);
                 window.close();
@@ -432,23 +682,55 @@ int main()
                 gameMenu.handleInput(event, window);
             }
 
-            // Ручное сохранение: F5
-            if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::F5) {
-                saveData.heroCurrentHP = heroCurrentHP;
-                saveData.heroMaxHP = heroMaxHP;
-                saveData.heroLevel = heroLevel;
-                saveData.heroCurrentXP = heroCurrentXP;
-                saveData.heroXPToNextLevel = heroXPToNextLevel;
-                saveData.heroPosX = hero.getPosition().x;
-                saveData.heroPosY = hero.getPosition().y;
-                saveData.currentLocationID = currentLocationID;
 
-                SaveSystem::saveGame(saveData);
+            // === ОТКРЫТИЕ МЕНЮ ЛУТА ===
+            if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::E) {
+                if (lootBag.isActive() && (currentLocationID == 2 || currentLocationID == 3)) {
+                    sf::Vector2f dist = hero.getPosition() - lootBag.getPosition();
+                    float distance = std::sqrt(dist.x * dist.x + dist.y * dist.y);
+
+                    if (distance < 50.f && !lootMenuOpen) {
+                        lootMenuOpen = true;
+                        std::cout << ">>> Loot menu opened! <<<" << std::endl;
+
+                        // Позиционируем меню ПО ЦЕНТРУ ЭКРАНА
+                        lootMenuBg.setPosition(
+                            (window.getSize().x - 300.f) / 2.f,  // Центр по X
+                            (window.getSize().y - 200.f) / 2.f   // Центр по Y
+                        );
+                        std::cout << "Loot menu position: " << lootMenuBg.getPosition().x
+                            << ", " << lootMenuBg.getPosition().y << std::endl;
+                        std::cout << "Hero position: " << hero.getPosition().x
+                            << ", " << hero.getPosition().y << std::endl;
+
+
+                    }
+                }
             }
+            // === ПОКАЗ ПОДСКАЗКИ (без подбора!) ===
+            if (lootBag.isActive() && (currentLocationID == 2 || currentLocationID == 3)) {
+                sf::Vector2f dist = hero.getPosition() - lootBag.getPosition();
+                float distance = std::sqrt(dist.x * dist.x + dist.y * dist.y);
+
+                if (distance < 50.f) {
+                    // Только рисуем подсказку, подбор — через меню!
+                    sf::Text hint("Press E to loot", font, 20);
+                    hint.setFillColor(sf::Color::Yellow);
+                    hint.setPosition(lootBag.getPosition().x - 40, lootBag.getPosition().y - 50);
+                    window.draw(hint);
+                }
+            }
+
+
         }
 
+    
         float deltaTime = clock.restart().asSeconds();
         sf::Vector2u winSize = window.getSize();
+
+        // === ОБНОВЛЯЕМ ВРЕМЯ ИГРЫ ===
+        totalPlayTime += deltaTime;
+
 
         // === ТЕЛЕПОРТАЦИЯ ===
         if (portal.isPlayerInside(hero.getGlobalBounds())) {
@@ -517,6 +799,8 @@ int main()
                         bool died = const_cast<Enemy&>(enemy).takeDamage(damage);
                         if (died) {
                             gainXP(15);
+                            slimesKilled++;
+                            std::cout << "Slime killed! Total: " << slimesKilled << std::endl;
                             if (std::rand() % 100 < 10) {
                                 PortalType pType = (std::rand() % 2 == 0) ? PORTAL_BOSS1 : PORTAL_BOSS2;
                                 portalManager.spawnPortal(enemy.getPosition(), pType);
@@ -534,9 +818,13 @@ int main()
                 boss1.takeDamage(25);
                 arrow.deactivate();
 
-                // Проверяем, умер ли босс, и даём XP
-                if (prevHP > 0 && boss1.getHP() <= 0) {
-                    gainXP(boss1.getXPReward());  // +150 XP
+                if (prevHP > 0 && boss1.getHP() <= 0 && !boss1Defeated) {
+                    gainXP(boss1.getXPReward());
+                    bossesKilled++;
+                    boss1Defeated = true;
+                    std::cout << "Boss 1 killed! Total bosses: " << bossesKilled << std::endl;
+                    lootBag.init(boss1.getPosition(), boss1Loot);
+                    std::cout << "Boss 1 defeated! Loot bag dropped!" << std::endl;
                 }
             }
 
@@ -546,12 +834,116 @@ int main()
                 boss2.takeDamage(25);
                 arrow.deactivate();
 
-                // Проверяем, умер ли босс, и даём XP
-                if (prevHP > 0 && boss2.getHP() <= 0) {
-                    gainXP(boss2.getXPReward());  // +150 XP
+                if (prevHP > 0 && boss2.getHP() <= 0 && !boss2Defeated) {
+                    gainXP(boss2.getXPReward());
+                    bossesKilled++;
+                    boss2Defeated = true;
+                    std::cout << "Boss 2 killed! Total bosses: " << bossesKilled << std::endl;
+                    lootBag.init(boss2.getPosition(), boss2Loot);
+                    std::cout << "Boss 2 defeated! Loot bag dropped!" << std::endl;
                 }
             }
+        } 
+
+        // === ПРОВЕРКА УРОНА ОТ ОГНЕННОГО ШАРА  ===
+        if (fireball.isActive() && currentLocationID == 1) {
+            auto& enemies = plainLoc.getEnemyManager().getEnemies();
+            sf::FloatRect fbBounds = fireball.getBounds();
+            sf::Vector2f fireballCenter(
+                fbBounds.left + fbBounds.width / 2.f,
+                fbBounds.top + fbBounds.height / 2.f
+            );
+            float aoeRadius = 80.f;
+
+            bool hitSomething = false;
+
+            for (auto& enemy : enemies) {
+                if (!enemy.isDead()) {
+                    sf::FloatRect enemyBounds = enemy.getBounds();
+                    sf::Vector2f enemyCenter(
+                        enemyBounds.left + enemyBounds.width / 2.f,
+                        enemyBounds.top + enemyBounds.height / 2.f
+                    );
+
+                    float dx = fireballCenter.x - enemyCenter.x;
+                    float dy = fireballCenter.y - enemyCenter.y;
+                    float distance = std::sqrt(dx * dx + dy * dy);
+
+                    // Если враг в радиусе взрыва — наносим урон
+                    if (distance < aoeRadius + enemyBounds.width / 2.f) {
+                        std::cout << "Fireball hit enemy at distance " << distance << std::endl;
+
+                        // Наносим урон и проверяем смерть
+                        bool died = const_cast<Enemy&>(enemy).takeDamage(fireball.getDamage());
+
+                        if (died) {
+                            // Враг умер — даём опыт и считаем убийство
+                            gainXP(15);
+                            slimesKilled++;
+                            std::cout << "Slime killed by fireball! Total: " << slimesKilled << std::endl;
+
+                            // Шанс 10% на выпадение портала босса
+                            if (std::rand() % 100 < 10) {
+                                PortalType pType = (std::rand() % 2 == 0) ? PORTAL_BOSS1 : PORTAL_BOSS2;
+                                portalManager.spawnPortal(enemy.getPosition(), pType);
+                                std::cout << "Boss portal spawned from slime!" << std::endl;
+                            }
+                        }
+
+                        hitSomething = true;
+                    }
+                }
+            }
+
+            if (hitSomething) {
+                fireball.deactivate();
+                std::cout << "Fireball exploded - AoE damage applied!" << std::endl;
+            }
         }
+
+        // === ПРОВЕРКА УРОНА ОТ ОГНЕННОГО ШАРА ПО БОССАМ ===
+
+// БОСС 1 (Арена ID=2)
+        if (fireball.isActive() && currentLocationID == 2 && boss1.isAlive()) {
+            if (fireball.getBounds().intersects(boss1.getBounds())) {
+                std::cout << "Fireball hit Boss 1!" << std::endl;
+
+                int prevHP = boss1.getHP();
+                boss1.takeDamage(fireball.getDamage());  // Урон как у стрелы (35)
+
+                // Проверка смерти босса
+                if (prevHP > 0 && boss1.getHP() <= 0 && !boss1Defeated) {
+                    gainXP(boss1.getXPReward());
+                    bossesKilled++;
+                    boss1Defeated = true;
+                    std::cout << "Boss 1 killed by fireball!" << std::endl;
+                    lootBag.init(boss1.getPosition(), boss1Loot);
+                }
+
+                fireball.deactivate();
+            }
+        }
+
+        // БОСС 2 (Арена ID=3)
+        if (fireball.isActive() && currentLocationID == 3 && boss2.isAlive()) {
+            if (fireball.getBounds().intersects(boss2.getBounds())) {
+                std::cout << "Fireball hit Boss 2!" << std::endl;
+
+                int prevHP = boss2.getHP();
+                boss2.takeDamage(fireball.getDamage());
+
+                if (prevHP > 0 && boss2.getHP() <= 0 && !boss2Defeated) {
+                    gainXP(boss2.getXPReward());
+                    bossesKilled++;
+                    boss2Defeated = true;
+                    std::cout << "Boss 2 killed by fireball!" << std::endl;
+                    lootBag.init(boss2.getPosition(), boss2Loot);
+                }
+
+                fireball.deactivate();
+            }
+        }
+
         // === ОБНОВЛЕНИЕ ЛОКАЦИИ (ВРАГИ И БОССЫ) ===
 
         // 1. Поляна (слизни)
@@ -586,10 +978,17 @@ int main()
                 }
             }
         }
-        // 2. Босс 1 (Арена огненная)
+        // 2. Босс 1
         if (currentLocationID == 2) {
+            bool wasDead = !boss1.isAlive();
             // Обновляем босса ВСЕГДА (даже если мёртв - для таймера респавна)
             boss1.update(deltaTime, hero.getPosition());
+
+            // Если босс только что респавнился
+            if (wasDead && boss1.isAlive()) {
+                boss1Defeated = false;  // Сбрасываем флаг!
+                std::cout << "Boss 1 respawned - loot flag reset" << std::endl;
+            }
 
             // Урон герою наносится только если босс жив
             if (boss1.isAlive() && boss1.getBounds().intersects(hero.getGlobalBounds())) {
@@ -607,9 +1006,16 @@ int main()
                 }
             }
         }
+        //3. Босс 2
         if (currentLocationID == 3) {
+            bool wasDead = !boss2.isAlive();
             // Обновляем босса ВСЕГДА
             boss2.update(deltaTime, hero.getPosition());
+
+            if (wasDead && boss2.isAlive()) {
+                boss2Defeated = false;
+                std::cout << "Boss 2 respawned - loot flag reset" << std::endl;
+            }
 
             if (boss2.isAlive() && boss2.getBounds().intersects(hero.getGlobalBounds())) {
                 if (!isInvulnerable) {
@@ -637,7 +1043,25 @@ int main()
                 isInvulnerable = false;
             }
         }
+        // === РЕГЕНЕРАЦИЯ МАНЫ ===
+        if (!fireball.isActive() && !arrow.isActive() && !isInvulnerable) {
+            mpRegenTimer += deltaTime;
 
+            // Начинаем регенить после задержки
+            if (mpRegenTimer >= MP_REGEN_DELAY) {
+                // Регенерим ману
+                heroCurrentMP += MP_REGEN_RATE * deltaTime;
+
+                // Ограничиваем максимумом
+                if (heroCurrentMP > heroMaxMP) {
+                    heroCurrentMP = heroMaxMP;
+                }
+            }
+        }
+        else {
+            // Если атакуем или в бою, сбрасываем таймер
+            mpRegenTimer = 0.f;
+        }
         // === ОБРАБОТКА ПРОБЕЛА (ДЭШ) ===
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space) && !isDashing && dashCooldown <= 0.f) {
             sf::Vector2f dir(0.f, 0.f);
@@ -708,6 +1132,41 @@ int main()
             if (bounds.top + bounds.height > WORLD_HEIGHT)
                 hero.setPosition(hero.getPosition().x, WORLD_HEIGHT - bounds.height);
         }
+        // === ПРОВЕРКА РАССТОЯНИЯ ДО МЕШОЧКА ===
+        bool nearLootBag = false;
+        if (lootBag.isActive() && (currentLocationID == 2 || currentLocationID == 3)) {
+            sf::Vector2f dist = hero.getPosition() - lootBag.getPosition();
+            float distance = std::sqrt(dist.x * dist.x + dist.y * dist.y);
+
+            if (distance < 50.f) {
+                nearLootBag = true;
+
+                // Рисуем подсказку
+                sf::Text hint("Press E to loot", font, 20);
+                hint.setFillColor(sf::Color::Yellow);
+                hint.setPosition(lootBag.getPosition().x - 40, lootBag.getPosition().y - 50);
+                window.draw(hint);
+            }
+        }
+
+        // === ОБРАБОТКА ЛКМ ===
+        static bool prevLmbState = false;
+        bool currentLmbState = sf::Mouse::isButtonPressed(sf::Mouse::Left);
+        bool lmbPressed = currentLmbState && !prevLmbState;
+        bool lmbReleased = !currentLmbState && prevLmbState;
+        bool lmbHeld = currentLmbState;
+        prevLmbState = currentLmbState;
+
+        sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+        sf::Vector2f mouseWorld = window.mapPixelToCoords(mousePos, camera);
+
+        // === ЗОНА HUD ===
+        float hudX = 600.f;
+        float hudY = 850.f;
+        float hudW = 700.f;
+        float hudH = 150.f;
+        sf::FloatRect hudRect(hudX, hudY, hudW, hudH);
+        bool clickedOnHUD = hudRect.contains(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y));
 
         // === АНИМАЦИЯ ===
         if (isAttacking) {
@@ -801,6 +1260,12 @@ int main()
                 boss1BarFill.setPosition(bossPos.x - 30, bossPos.y - 35);
                 boss1BarFill.setScale(barScale, barScale);
                 window.draw(boss1BarFill);
+
+            }
+            // === РИСУЕМ МЕШОЧЕК (если активен) ===
+            if (lootBag.isActive()) {
+                lootBag.update();
+                lootBag.draw(window);
             }
         }
         else if (currentLocationID == 3) {
@@ -829,9 +1294,16 @@ int main()
                 boss2BarFill.setPosition(bossPos.x - 30, bossPos.y - 35);
                 boss2BarFill.setScale(barScale, barScale);
                 window.draw(boss2BarFill);
+
+            }
+            // === РИСУЕМ МЕШОЧЕК (если активен) ===
+            if (lootBag.isActive()) {
+                lootBag.update();
+                lootBag.draw(window);
             }
         }
         portal.draw(window);
+
 
         // Рисуем героя (мигаем если неуязвим)
         if (!isInvulnerable || static_cast<int>(invulnerableTimer * 10) % 2 == 0) {
@@ -840,36 +1312,128 @@ int main()
 
         // === БРОНЯ (ОВЕРЛЕЙ) ===
         static sf::Texture armorOverlayTex;
+        static sf::Texture armorOverlayMageTex;
         static bool armorLoaded = false;
 
         if (!armorLoaded) {
             if (armorOverlayTex.loadFromFile("armor_overlay.png")) {
                 armorOverlayTex.setSmooth(false);
-                std::cout << "Armor loaded!" << std::endl;
+            }
+            if (armorOverlayMageTex.loadFromFile("armor_overlay_mage.png")) {
+                armorOverlayMageTex.setSmooth(false);
             }
             else {
-                std::cout << "Warning: armor_overlay.png not found!" << std::endl;
+                std::cout << "Warning: armor_overlay_mage.png not found!" << std::endl;
             }
             armorLoaded = true;
         }
 
-        sf::Sprite armorOverlay;
-        armorOverlay.setTexture(armorOverlayTex);
-        armorOverlay.setScale(2.f, 2.f);
+        const auto& equipment = inventory.getEquipment();
 
-        // Рисуем броню если экипирована
-        const auto& equipment = inventory.getEquipment();  // ОДИН РАЗ!
-        if (equipment[1].type == ITEM_ARMOR) {
+        // Рисуем обычную броню (если это не мантия мага)
+        if (equipment[1].type == ITEM_ARMOR && equipment[1].name != "Mage Robe") {
+            sf::Sprite armorOverlay(armorOverlayTex);
+            armorOverlay.setScale(2.f, 2.f);
             armorOverlay.setPosition(hero.getPosition().x, hero.getPosition().y);
             window.draw(armorOverlay);
         }
 
+        // Рисуем мантию мага
+        if (equipment[1].type == ITEM_ARMOR && equipment[1].name == "Mage Robe") {
+            sf::Sprite mageArmorOverlay(armorOverlayMageTex);
+            mageArmorOverlay.setScale(2.f, 2.f);
+            mageArmorOverlay.setPosition(hero.getPosition().x, hero.getPosition().y);
+            window.draw(mageArmorOverlay);
+        }
+
         arrow.draw(window);
 
-
+        // === РИСУЕМ ОГНЕННЫЙ ШАР ===
+        fireball.update(deltaTime);
+        if (fireball.isActive()) {
+            fireball.draw(window);
+        }
 
         // === HUD ===
         window.setView(window.getDefaultView());
+
+        // === ОТРИСОВКА МЕНЮ ЛУТА (теперь в экранном view!) ===
+        if (lootMenuOpen) {
+            // Рисуем фон меню
+            window.draw(lootMenuBg);
+
+            // Получаем предметы из мешочка
+            const auto& lootItems = lootBag.getItems();
+
+            // Рисуем слоты для предметов
+            float slotSize = 50.f;
+            float startX = lootMenuBg.getPosition().x + 20.f;
+            float startY = lootMenuBg.getPosition().y + 20.f;
+
+            for (size_t i = 0; i < lootItems.size(); ++i) {
+                if (lootItems[i].type == ITEM_NONE) continue;
+
+                float slotX = startX + (i % 3) * (slotSize + 10.f);
+                float slotY = startY + (i / 3) * (slotSize + 10.f);
+
+                // Рисуем рамку слота
+                sf::RectangleShape slotFrame(sf::Vector2f(slotSize, slotSize));
+                slotFrame.setPosition(slotX, slotY);
+                slotFrame.setFillColor(sf::Color(30, 30, 30));
+                slotFrame.setOutlineThickness(2.f);
+                slotFrame.setOutlineColor(sf::Color(100, 100, 100));
+                window.draw(slotFrame);
+
+                // Рисуем предмет
+                sf::Sprite itemSprite(lootItems[i].texture);
+                itemSprite.setScale(3.f, 3.f); 
+                itemSprite.setPosition(slotX + 2.f, slotY + 2.f);
+                window.draw(itemSprite);
+
+                // Проверяем клик по предмету
+                if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
+                    sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+                    sf::FloatRect itemRect(slotX, slotY, slotSize, slotSize);
+
+                    if (itemRect.contains(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y))) {
+                        // Начинаем перетаскивание
+                        isDraggingFromLoot = true;
+                        draggedLootIndex = i;
+                    }
+                }
+            }
+
+            // Кнопка "Закрыть"
+            sf::RectangleShape closeBtn(sf::Vector2f(25.f, 25.f));
+            closeBtn.setPosition(
+                lootMenuBg.getPosition().x + lootMenuBg.getSize().x - 30.f,  // Справа сверху
+                lootMenuBg.getPosition().y + 5.f
+            );
+            closeBtn.setFillColor(sf::Color(150, 50, 50));
+            window.draw(closeBtn);
+
+            // Рисуем крестик "X"
+            sf::Text closeText("X", font, 18);
+            closeText.setPosition(closeBtn.getPosition().x + 6.f, closeBtn.getPosition().y - 2.f);
+            closeText.setFillColor(sf::Color::White);
+            window.draw(closeText);
+
+            // Закрытие по клику на кнопку
+            if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
+                sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+                sf::FloatRect closeRect = closeBtn.getGlobalBounds();
+
+                if (closeRect.contains(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y))) {
+                    lootMenuOpen = false;
+                }
+            }
+
+            // Закрытие по клавише Escape
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Escape)) {
+                lootMenuOpen = false;
+            }
+        }
+
         // 1. Рисуем фон HUD
         float hudScale = 6.0f;
         hudBg.setScale(hudScale, hudScale);
@@ -901,7 +1465,43 @@ int main()
         hpFillSprite.setScale(barScale, barScale);
         window.draw(hpFillSprite);
 
-        // 3. === РИСУЕМ XP БАР (ЗЕЛЁНЫЙ) ===
+
+        // 3. === РИСУЕМ MP БАР (СИНИЙ) ===
+        float mpBarX = 650.f;
+        float mpBarY = 910.f;  // Над HP баром
+
+        // Загружаем текстуру для MP бара (если есть)
+        sf::Texture texMPVoid, texMPFill;
+        if (!texMPVoid.loadFromFile("mp_bar_void.png")) {
+            // Если нет текстуры, используем HP бар как заглушку
+            texMPVoid = texHpVoid;
+        }
+        if (!texMPFill.loadFromFile("mp_bar.png")) {
+            texMPFill = texHpFill;  // Используем синий цвет если есть, или красный
+        }
+        texMPVoid.setSmooth(false);
+        texMPFill.setSmooth(false);
+
+        sf::Sprite mpVoidSprite(texMPVoid);
+        mpVoidSprite.setPosition(mpBarX, mpBarY);
+        mpVoidSprite.setScale(barScale, barScale);
+        window.draw(mpVoidSprite);
+
+        float mpPercent = static_cast<float>(heroCurrentMP) / static_cast<float>(heroMaxMP);
+        if (mpPercent < 0.f) mpPercent = 0.f;
+        if (mpPercent > 1.f) mpPercent = 1.f;
+
+        int mpFullWidth = texMPFill.getSize().x;
+        int mpCurrentWidth = static_cast<int>(mpFullWidth * mpPercent);
+
+        sf::Sprite mpFillSprite(texMPFill);
+        mpFillSprite.setTextureRect(sf::IntRect(0, 0, mpCurrentWidth, texMPFill.getSize().y));
+        mpFillSprite.setPosition(mpBarX, mpBarY);
+        mpFillSprite.setScale(barScale, barScale);
+        window.draw(mpFillSprite);
+
+
+        // 4. === РИСУЕМ XP БАР (ЗЕЛЁНЫЙ) ===
         float xpBarX = 650.f;   // Чуть левее HP
         float xpBarY = 960.f;  // Ниже (на зелёной полоске)
         float xpBarScale = 4.0f;
@@ -932,14 +1532,12 @@ int main()
         levelText.setString(lvlString);
 
         // 2. Позиционируем под XP баром
-        // xpBarY + 45.f означает: позиция бара + высота бара + небольшой отступ
         levelText.setPosition(xpBarX + 20, xpBarY + 45.f);
 
         // 3. Рисуем
         window.draw(levelText);
 
         // Остальные бары (MP, XP)
-        mpBar.setScale(4.0f, 4.0f); mpBar.setPosition(500, 710); window.draw(mpBar);
         weaponBar.setScale(4.0f, 4.0f); weaponBar.setPosition(740, 715); window.draw(weaponBar);
         invBar.setScale(4.0f, 4.0f); invBar.setPosition(950, 690); window.draw(invBar);
 
@@ -947,28 +1545,8 @@ int main()
 
 
 
-        // === ОБРАБОТКА ЛКМ ===
-        static bool prevLmbState = false;
-        bool currentLmbState = sf::Mouse::isButtonPressed(sf::Mouse::Left);
-        bool lmbPressed = currentLmbState && !prevLmbState;
-        bool lmbReleased = !currentLmbState && prevLmbState;
-        bool lmbHeld = currentLmbState;
-        prevLmbState = currentLmbState;
-
-        sf::Vector2i mousePos = sf::Mouse::getPosition(window);
-        sf::Vector2f mouseWorld = window.mapPixelToCoords(mousePos, camera);
-
-        // === ЗОНА HUD ===
-        float hudX = 600.f;    // Левый край панели
-        float hudY = 850.f;    // Верхний край панели (низ экрана)
-        float hudW = 700.f;   // Ширина панели
-        float hudH = 150.f;    // Высота панели
-
-        sf::FloatRect hudRect(hudX, hudY, hudW, hudH);
-        bool clickedOnHUD = hudRect.contains(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y));
-
         // === СТРЕЛЬБА (с кулдауном) ===
-        // Обновляем кулдаун
+         // Обновляем кулдаун
         if (shootCooldown > 0.f) {
             shootCooldown -= deltaTime;
         }
@@ -976,31 +1554,65 @@ int main()
         // Стреляем только если: зажата кнопка + не по HUD + кулдаун прошёл
         if (lmbHeld && !clickedOnHUD && shootCooldown <= 0.f) {
             const auto& equipment = inventory.getEquipment();
-            if (equipment[0].type != ITEM_NONE) {  // Лук экипирован
 
-                arrow.deactivate();  // Сбрасываем старую стрелу
-                std::cout << "SHOOT!" << std::endl;
+            // Проверяем, что в слоте оружия что-то есть
+            if (equipment[0].type == ITEM_WEAPON) {
 
-                sf::Vector2f heroCenter(
-                    hero.getPosition().x + 16,
-                    hero.getPosition().y + 16
-                );
+                // === ПОСОХ МАГА (атака файерболом) — ПРОВЕРЯЕМ ПЕРВЫМ ===
+                if (equipment[0].attackType == Item::ATTACK_FIREBALL) {
 
-                sf::Vector2f toMouse = mouseWorld - heroCenter;
-                float len = std::sqrt(toMouse.x * toMouse.x + toMouse.y * toMouse.y);
-                if (len > 0.f) toMouse /= len;
+                    // Проверяем, надета ли мантия мага
+                    bool hasMageRobe = (equipment[1].type == ITEM_ARMOR && equipment[1].name == "Mage Robe");
 
-                arrow.shoot(heroCenter, toMouse, equipment[0].damage);
+                    if (hasMageRobe) {
+                        // Проверяем, хватает ли маны
+                        if (heroCurrentMP >= FIREBALL_COST) {
+                            fireball.deactivate();
+                            std::cout << "CAST FIREBALL!" << std::endl;
 
-                // Запускаем анимацию атаки
-                if (!isAttacking) {
-                    isAttacking = true;
-                    attackFrame = 0;
-                    attackTimer = 0.f;
+                            sf::Vector2f heroCenter(hero.getPosition().x + 16, hero.getPosition().y + 16);
+                            sf::Vector2f toMouse = mouseWorld - heroCenter;
+
+                            fireball.shoot(heroCenter, toMouse, equipment[0].damage);
+
+                            // Тратим ману
+                            heroCurrentMP -= FIREBALL_COST;
+                            mpRegenTimer = 0.f;  // Сбрасываем таймер регенерации
+
+                            if (!isAttacking) {
+                                isAttacking = true;
+                                attackFrame = 0;
+                                attackTimer = 0.f;
+                            }
+                            shootCooldown = shootCooldownTime;
+                        }
+                        else {
+                            std::cout << "Not enough mana! Need " << FIREBALL_COST << " MP" << std::endl;
+                        }
+                    }
+                    else {
+                        std::cout << "Cannot use Mage Wand! Equip Mage Robe first." << std::endl;
+                    }
                 }
+                // === ЛУК (атака стрелами) — ВСЁ ОСТАЛЬНОЕ ===
+                else {
+                    arrow.deactivate();
+                    std::cout << "SHOOT ARROW!" << std::endl;
 
-                // === ЗАПУСКАЕМ КУЛДАУН ===
-                shootCooldown = shootCooldownTime;
+                    sf::Vector2f heroCenter(hero.getPosition().x + 16, hero.getPosition().y + 16);
+                    sf::Vector2f toMouse = mouseWorld - heroCenter;
+                    float len = std::sqrt(toMouse.x * toMouse.x + toMouse.y * toMouse.y);
+                    if (len > 0.f) toMouse /= len;
+
+                    arrow.shoot(heroCenter, toMouse, equipment[0].damage);
+
+                    if (!isAttacking) {
+                        isAttacking = true;
+                        attackFrame = 0;
+                        attackTimer = 0.f;
+                    }
+                    shootCooldown = shootCooldownTime;
+                }
             }
         }
         // Индикатор готовности к выстрелу (маленькая точка)
@@ -1099,8 +1711,68 @@ int main()
         if (gameMenu.isVisible()) {
             gameMenu.draw(window);
         }
+        // === ОБРАБОТКА ПЕРЕТАСКИВАНИЯ ИЗ МЕНЮ ЛУТА ===
+        if (isDraggingFromLoot && lootMenuOpen) {
+            sf::Vector2i mousePosScreen = sf::Mouse::getPosition(window);
+
+            // Рисуем предмет под курсором
+            const auto& lootItems = lootBag.getItems();
+            if (draggedLootIndex >= 0 && draggedLootIndex < lootItems.size()) {
+                sf::Sprite dragSprite(lootItems[draggedLootIndex].texture);
+                dragSprite.setScale(3.f, 3.f);
+                dragSprite.setPosition(
+                    static_cast<float>(mousePosScreen.x) - 24.f,
+                    static_cast<float>(mousePosScreen.y) - 24.f
+                );
+                window.draw(dragSprite);
+            }
+
+            // Проверяем отпускание кнопки мыши
+            if (lmbReleased) {
+                auto& backpack = const_cast<std::vector<Item>&>(inventory.getBackpack());
+                float invStartX = 1100.f;
+                float invStartY = 880.f;
+                float slotSize = 50.f;
+
+                bool placed = false;
+                for (int row = 0; row < 2 && !placed; ++row) {
+                    for (int col = 0; col < 3 && !placed; ++col) {
+                        int slotIndex = row * 3 + col;
+                        if (slotIndex >= 6) break;
+
+                        float slotX = invStartX + col * (slotSize + 5.f);
+                        float slotY = invStartY + row * (slotSize + 5.f);
+
+                        bool inSlot = (mousePosScreen.x >= slotX &&
+                            mousePosScreen.x < slotX + slotSize &&
+                            mousePosScreen.y >= slotY &&
+                            mousePosScreen.y < slotY + slotSize);
+
+                        if (inSlot) {
+                            if (backpack[slotIndex].type == ITEM_NONE) {
+                                // Перемещаем предмет в инвентарь
+                                backpack[slotIndex] = lootItems[draggedLootIndex];
+                                placed = true;
+                                std::cout << ">>> Item moved to slot " << slotIndex << " <<<" << std::endl;
+
+                                // === УДАЛЯЕМ ПРЕДМЕТ ИЗ МЕШОЧКА ===
+                                lootBag.removeItem(draggedLootIndex);
+                            }
+                        }
+                    }
+                }
+
+                isDraggingFromLoot = false;
+                draggedLootIndex = -1;
+
+                // Если мешочек опустел, закрываем меню
+                if (!lootBag.isActive()) {
+                    lootMenuOpen = false;
+                    std::cout << "DEBUG: Loot bag emptied, closing menu" << std::endl;
+                }
+            }
+        }
         window.display();
     }
-
     return 0;
 }
