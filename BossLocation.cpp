@@ -17,6 +17,4 @@ bool BossLocation::load(const std::string& mapFilename, sf::Vector2f spawn, cons
 
 void BossLocation::draw(sf::RenderWindow& window) {
     window.draw(mapSprite);
-    // Если у босса есть спрайт, рисуем его здесь:
-    // window.draw(bossSprite); 
 }
