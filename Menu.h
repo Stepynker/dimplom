@@ -94,6 +94,46 @@ public:
         }
     }
 
+    // === ДОБАВИТЬ В ПУБЛИЧНУЮ ЧАСТЬ КЛАССА ===
+    void drawStats(sf::RenderWindow& window, float playTime, int slimes, int bosses) {
+        if (!visible) return;
+
+        // Позиция справа от кнопок
+        float statsX = window.getSize().x / 2 + 150;
+        float statsY = 300;
+
+        // Заголовок
+        sf::Text statsTitle("STATISTICS", font, 24);
+        statsTitle.setFillColor(sf::Color(255, 200, 0));
+        statsTitle.setPosition(statsX, statsY - 40);
+        window.draw(statsTitle);
+
+        // Время игры
+        int minutes = static_cast<int>(playTime) / 60;
+        int seconds = static_cast<int>(playTime) % 60;
+        std::string timeStr = "Time: " + std::to_string(minutes) + "m " +
+            (seconds < 10 ? "0" : "") + std::to_string(seconds) + "s";
+        sf::Text timeText(timeStr, font, 20);
+        timeText.setFillColor(sf::Color::White);
+        timeText.setPosition(statsX, statsY);
+        window.draw(timeText);
+
+        // Слизни
+        std::string slimeStr = "Slimes: " + std::to_string(slimes);
+        sf::Text slimeText(slimeStr, font, 20);
+        slimeText.setFillColor(sf::Color::White);
+        slimeText.setPosition(statsX, statsY + 30);
+        window.draw(slimeText);
+
+        // Боссы
+        std::string bossStr = "Bosses: " + std::to_string(bosses);
+        sf::Text bossText(bossStr, font, 20);
+        bossText.setFillColor(sf::Color(255, 100, 100));
+        bossText.setPosition(statsX, statsY + 60);
+        window.draw(bossText);
+    }
+
+
 private:
     struct Button {
         std::string label;
