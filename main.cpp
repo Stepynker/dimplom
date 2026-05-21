@@ -2,6 +2,8 @@
 #include <iostream>
 #include <vector>
 #include "Portal.h"
+#include <Windows.h>
+#include <locale.h>
 #include "Plain.h"
 #include "Inventory.h"
 #include "Arrow.h"
@@ -131,6 +133,9 @@ int main()
     // === ПРОВЕРКА РАЗРЕШЕНИЯ ===
     sf::Vector2u resolution = window.getSize();
     std::cout << "Screen resolution: " << resolution.x << "x" << resolution.y << std::endl;
+    
+    SetConsoleOutputCP(1251);
+    setlocale(LC_ALL, "Russian");
 
     // РАЗМЕР МИРА
     const int WORLD_WIDTH = 1024;
