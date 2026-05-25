@@ -127,7 +127,7 @@ Item savedToItem(const SavedItem& saved) {
 int main()
 {
     // ОКНО НА ВЕСЬ ЭКРАН 
-    sf::RenderWindow window(sf::VideoMode::getFullscreenModes()[0], "My Pixel RPG", sf::Style::Fullscreen);
+    sf::RenderWindow window(sf::VideoMode(2560, 1600), "My Pixel RPG", sf::Style::Fullscreen);
     window.setFramerateLimit(60);
 
     // === ПРОВЕРКА РАЗРЕШЕНИЯ ===
@@ -1183,7 +1183,7 @@ int main()
 
         // === ЗОНА HUD ===
         float hudX = (600.f / BASE_WIDTH) * resolution.x;
-        float hudY = resolution.y - (150.f * uiScale) - 20.f;  // 20px отступ снизу
+        float hudY = (850.f / BASE_HEIGHT) * resolution.y;  // Фиксированная позиция от базового разрешения
         float hudW = 700.f * uiScale;
         float hudH = 150.f * uiScale;
         sf::FloatRect hudRect(hudX, hudY, hudW, hudH);
@@ -1460,13 +1460,15 @@ int main()
         hudBg.setScale(hudScale, hudScale);
         float bgWidth = hudBg.getGlobalBounds().width;
         float bgHeight = hudBg.getGlobalBounds().height;
-        hudBg.setPosition((winSize.x - bgWidth) / 2.f, winSize.y - bgHeight - 50);
+        float hudBgY = (1000.f / BASE_HEIGHT) * resolution.y;  // Примерно 1000 - позиция снизу
+        hudBg.setPosition((winSize.x - bgWidth) / 2.f, hudBgY);
         window.draw(hudBg);
 
         // 2. === РИСУЕМ HP БАР ===
         float hpBarX = (650.f / BASE_WIDTH) * resolution.x;
         float hpBarY = (860.f / BASE_HEIGHT) * resolution.y;
-        float barScale = 4.0f * uiScale;  // Масштабируем и бары
+        float barScale = 4.0f * uiScale;
+
 
         sf::Sprite hpVoidSprite(texHpVoid);
         hpVoidSprite.setPosition(hpBarX, hpBarY);
@@ -1488,8 +1490,8 @@ int main()
 
 
         // 3. === РИСУЕМ MP БАР (СИНИЙ) ===
-        float mpBarX = 650.f;
-        float mpBarY = 910.f;  // Над HP баром
+        float mpBarX = (650.f / BASE_WIDTH) * resolution.x;
+        float mpBarY = (910.f / BASE_HEIGHT) * resolution.y;  // Было 910.f без масштабирования!
 
         // Загружаем текстуру для MP бара (если есть)
         sf::Texture texMPVoid, texMPFill;
@@ -1523,8 +1525,8 @@ int main()
 
 
         // 4. === РИСУЕМ XP БАР (ЗЕЛЁНЫЙ) ===
-        float xpBarX = 650.f;   // Чуть левее HP
-        float xpBarY = 960.f;  // Ниже (на зелёной полоске)
+        float xpBarX = (650.f / BASE_WIDTH) * resolution.x;
+        float xpBarY = (960.f / BASE_HEIGHT) * resolution.y;  // Было 960.f без масштабирования!
         float xpBarScale = 4.0f;
 
         // Фон (пустота)
@@ -1554,15 +1556,19 @@ int main()
 
         // 2. Позиционируем под XP баром
         levelText.setPosition(xpBarX + 20.f * uiScale, xpBarY + 45.f * uiScale);
-        levelText.setCharacterSize(static_cast<unsigned int>(20.f * uiScale));  // Масштаб шрифта
+        levelText.setCharacterSize(static_cast<unsigned int>(20.f * uiScale));
 
         // 3. Рисуем
         window.draw(levelText);
 
         // Остальные бары (MP, XP)
-        weaponBar.setScale(4.0f, 4.0f); weaponBar.setPosition(740, 715); window.draw(weaponBar);
-        invBar.setScale(4.0f, 4.0f); invBar.setPosition(950, 690); window.draw(invBar);
+        weaponBar.setScale(4.0f * uiScale, 4.0f * uiScale);
+        weaponBar.setPosition((740.f / BASE_WIDTH) * resolution.x, (715.f / BASE_HEIGHT) * resolution.y);
+        window.draw(weaponBar);
 
+        invBar.setScale(4.0f * uiScale, 4.0f * uiScale);
+        invBar.setPosition((950.f / BASE_WIDTH) * resolution.x, (690.f / BASE_HEIGHT) * resolution.y);
+        window.draw(invBar);
 
 
 
