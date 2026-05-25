@@ -133,6 +133,22 @@ int main()
     // === ПРОВЕРКА РАЗРЕШЕНИЯ ===
     sf::Vector2u resolution = window.getSize();
     std::cout << "Screen resolution: " << resolution.x << "x" << resolution.y << std::endl;
+
+    // === МАСШТАБИРОВАНИЕ ИНТЕРФЕЙСА ===
+    // Базовое разрешение, под которое верстался интерфейс
+    const float BASE_WIDTH = 2560.f;
+    const float BASE_HEIGHT = 1600.f;
+
+    // Коэффициенты масштабирования (используем средний для сохранения пропорций)
+    float uiScaleX = static_cast<float>(resolution.x) / BASE_WIDTH;
+    float uiScaleY = static_cast<float>(resolution.y) / BASE_HEIGHT;
+    float uiScale = (uiScaleX + uiScaleY) / 2.f;  // Средний масштаб
+
+    // Ограничим масштаб, чтобы интерфейс не стал слишком большим
+    if (uiScale > 2.f) uiScale = 2.f;
+    if (uiScale < 0.8f) uiScale = 0.8f;
+
+    std::cout << "UI Scale: " << uiScale << std::endl;
     
     SetConsoleOutputCP(1251);
     setlocale(LC_ALL, "Russian");
@@ -1166,10 +1182,10 @@ int main()
         sf::Vector2f mouseWorld = window.mapPixelToCoords(mousePos, camera);
 
         // === ЗОНА HUD ===
-        float hudX = 600.f;
-        float hudY = 850.f;
-        float hudW = 700.f;
-        float hudH = 150.f;
+        float hudX = (600.f / BASE_WIDTH) * resolution.x;
+        float hudY = resolution.y - (150.f * uiScale) - 20.f;  // 20px отступ снизу
+        float hudW = 700.f * uiScale;
+        float hudH = 150.f * uiScale;
         sf::FloatRect hudRect(hudX, hudY, hudW, hudH);
         bool clickedOnHUD = hudRect.contains(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y));
 
@@ -1448,9 +1464,9 @@ int main()
         window.draw(hudBg);
 
         // 2. === РИСУЕМ HP БАР ===
-        float hpBarX = 650.f;
-        float hpBarY = 860.f;
-        float barScale = 4.0f;
+        float hpBarX = (650.f / BASE_WIDTH) * resolution.x;
+        float hpBarY = (860.f / BASE_HEIGHT) * resolution.y;
+        float barScale = 4.0f * uiScale;  // Масштабируем и бары
 
         sf::Sprite hpVoidSprite(texHpVoid);
         hpVoidSprite.setPosition(hpBarX, hpBarY);
@@ -1537,7 +1553,8 @@ int main()
         levelText.setString(lvlString);
 
         // 2. Позиционируем под XP баром
-        levelText.setPosition(xpBarX + 20, xpBarY + 45.f);
+        levelText.setPosition(xpBarX + 20.f * uiScale, xpBarY + 45.f * uiScale);
+        levelText.setCharacterSize(static_cast<unsigned int>(20.f * uiScale));  // Масштаб шрифта
 
         // 3. Рисуем
         window.draw(levelText);
@@ -1661,12 +1678,13 @@ int main()
         inventory.draw(window);            // Рисуем предметы
 
         // === МИНИ-КАРТА ===
-        float minimapUI_W = 200;
-        float minimapUI_H = 200;
-        float paddingX = 20;
-        float paddingY = 20;
+
+        float minimapUI_W = 200.f * uiScale;
+        float minimapUI_H = 200.f * uiScale;
+        float paddingX = 20.f * uiScale;
+        float paddingY = 20.f * uiScale;
         float uiPosX = winSize.x - minimapUI_W - paddingX;
-        float uiPosY = paddingY;
+        float uiPosY = paddingY;                             
 
         // 1. Рисуем РАМКУ
         minimapFrameSprite.setPosition(uiPosX, uiPosY);
@@ -1735,9 +1753,9 @@ int main()
             // Проверяем отпускание кнопки мыши
             if (lmbReleased) {
                 auto& backpack = const_cast<std::vector<Item>&>(inventory.getBackpack());
-                float invStartX = 1100.f;
-                float invStartY = 880.f;
-                float slotSize = 50.f;
+                float invStartX = (1100.f / BASE_WIDTH) * resolution.x;  // Процент от ширины
+                float invStartY = (880.f / BASE_HEIGHT) * resolution.y;  // Процент от высоты
+                float slotSize = 50.f * uiScale;
 
                 bool placed = false;
                 for (int row = 0; row < 2 && !placed; ++row) {
